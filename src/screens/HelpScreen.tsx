@@ -34,6 +34,14 @@ const SECTIONS: Section[] = [
         question: 'Gestion du stock',
         answer: 'Les articles avec un seuil défini affichent des boutons − et + dans "À la casa". Décrémenter le stock en dessous du seuil le remet automatiquement dans "À acheter".',
       },
+      {
+        question: 'Cocher un article "À acheter" avec seuil',
+        answer: 'Si un article a un seuil configuré, appuyer sur sa checkbox vous demande combien vous en avez acheté. La quantité saisie s\'ajoute au stock existant. Si le total dépasse le seuil, l\'article passe automatiquement "À la casa". Sinon il reste "À acheter" avec le stock mis à jour.',
+      },
+      {
+        question: 'Stock à la création',
+        answer: 'En créant un article dans Paramétrage, si vous renseignez un stock supérieur au seuil, l\'article est placé directement "À la casa". Si le stock est inférieur ou égal au seuil, il est placé "À acheter".',
+      },
     ],
   },
   {
