@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Share, Alert, Clipboard,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
@@ -27,6 +27,12 @@ export default function ProfileScreen() {
     });
   }
 
+  function copyInviteCode() {
+    if (!household) return;
+    Clipboard.setString(household.inviteCode);
+    Alert.alert('Copié !', `Le code ${household.inviteCode} a été copié dans le presse-papiers.`);
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.card}>
@@ -47,10 +53,11 @@ export default function ProfileScreen() {
             {household.members.length} membre{household.members.length > 1 ? 's' : ''}
           </Text>
 
-          <TouchableOpacity style={styles.inviteRow} onPress={shareInviteCode}>
+          <TouchableOpacity style={styles.inviteRow} onPress={shareInviteCode} onLongPress={copyInviteCode}>
             <View>
               <Text style={styles.inviteLabel}>Code d'invitation</Text>
               <Text style={styles.inviteCode}>{household.inviteCode}</Text>
+              <Text style={styles.inviteHint}>Appui long pour copier</Text>
             </View>
             <Text style={styles.shareIcon}>↗</Text>
           </TouchableOpacity>
@@ -131,6 +138,7 @@ const styles = StyleSheet.create({
   },
   inviteLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
   inviteCode: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.primary, letterSpacing: 4 },
+  inviteHint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2, fontStyle: 'italic' },
   shareIcon: { fontSize: 22, color: COLORS.primary },
   logoutBtn: {
     backgroundColor: COLORS.surface,

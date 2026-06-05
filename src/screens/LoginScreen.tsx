@@ -12,7 +12,10 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    if (!email || !password) return;
+    if (!email.trim() || !password) {
+      Alert.alert('Champs requis', 'Veuillez remplir l\'email et le mot de passe.');
+      return;
+    }
     setLoading(true);
     try {
       await login(email.trim(), password);

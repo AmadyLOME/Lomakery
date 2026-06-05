@@ -4,6 +4,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   query,
   orderBy,
@@ -18,10 +19,14 @@ export function subscribeToFamilyGroups(
   householdId: string,
   onChange: (groups: ShoppingGroup[]) => void
 ): Unsubscribe {
-  return onSnapshot(collection(db, 'households', householdId, 'familyGroups'), (snap) => {
-    const groups = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingGroup));
-    onChange(groups);
-  });
+  return onSnapshot(
+    collection(db, 'households', householdId, 'familyGroups'),
+    (snap) => {
+      const groups = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingGroup));
+      onChange(groups);
+    },
+    (error) => console.error('[familyGroups] onSnapshot error:', error.code)
+  );
 }
 
 export async function addFamilyGroup(householdId: string, name: string): Promise<string> {
@@ -41,10 +46,14 @@ export function subscribeToFamilyList(
   householdId: string,
   onChange: (items: ShoppingItem[]) => void
 ): Unsubscribe {
-  return onSnapshot(collection(db, 'households', householdId, 'familyList'), (snap) => {
-    const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingItem));
-    onChange(items);
-  });
+  return onSnapshot(
+    collection(db, 'households', householdId, 'familyList'),
+    (snap) => {
+      const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingItem));
+      onChange(items);
+    },
+    (error) => console.error('[familyList] onSnapshot error:', error.code)
+  );
 }
 
 // Écoute en temps réel la liste personnelle d'un utilisateur
@@ -101,6 +110,19 @@ export async function incrementStock(collectionPath: string, item: ShoppingItem)
     stock: newStock,
     checked: !shouldBuy,
   });
+}
+
+export async function updateItem(
+  collectionPath: string,
+  itemId: string,
+  fields: Partial<Pick<ShoppingItem, 'name' | 'unit' | 'groupId' | 'stock' | 'threshold'>>
+) {
+  const data: Record<string, any> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    // undefined = champ à effacer dans Firestore
+    data[key] = value !== undefined ? value : deleteField();
+  }
+  await updateDoc(doc(db, collectionPath, itemId), data);
 }
 
 export async function deleteItem(collectionPath: string, itemId: string) {

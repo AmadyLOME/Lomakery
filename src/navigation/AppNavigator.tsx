@@ -7,6 +7,8 @@ import { useAuth } from '../hooks/useAuth';
 import LoginScreen from '../screens/LoginScreen';
 import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
 import FamilyListScreen from '../screens/FamilyListScreen';
+import RecipesScreen from '../screens/RecipesScreen';
+import WeekMenuScreen from '../screens/WeekMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HelpScreen from '../screens/HelpScreen';
 import { COLORS, FONT_SIZE } from '../constants/theme';
@@ -41,11 +43,11 @@ function MainTabs() {
           backgroundColor: COLORS.surface,
           borderTopColor: COLORS.border,
           borderTopWidth: 1,
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 6,
+          height: 58,
+          paddingBottom: 6,
+          paddingTop: 4,
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
         headerStyle: { backgroundColor: COLORS.background },
         headerTitleStyle: { fontWeight: '700', color: COLORS.text, fontSize: FONT_SIZE.xl },
         headerShadowVisible: false,
@@ -59,6 +61,28 @@ function MainTabs() {
           tabBarLabel: 'Courses',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: focused ? 24 : 20 }}>🛒</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Recipes"
+        component={RecipesScreen}
+        options={{
+          title: 'Recettes',
+          tabBarLabel: 'Recettes',
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: focused ? 24 : 20 }}>🍳</Text>
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="WeekMenu"
+        component={WeekMenuScreen}
+        options={{
+          title: 'Menu semaine',
+          tabBarLabel: 'Menu',
+          tabBarIcon: ({ focused }) => (
+            <Text style={{ fontSize: focused ? 24 : 20 }}>📅</Text>
           ),
         }}
       />

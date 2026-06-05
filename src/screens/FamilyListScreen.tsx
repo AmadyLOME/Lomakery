@@ -9,6 +9,7 @@ import {
   deleteFamilyGroup,
   toggleItem,
   deleteItem,
+  updateItem,
   decrementStock,
   incrementStock,
 } from '../services/lists';
@@ -19,11 +20,11 @@ import { COLORS, SPACING, FONT_SIZE } from '../constants/theme';
 
 type Tab = 'liste' | 'parametrage';
 
-export default function FamilyListScreen() {
+export default function FamilyListScreen({ route }: any) {
   const { user, profile } = useAuth();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [groups, setGroups] = useState<ShoppingGroup[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>('liste');
+  const [activeTab, setActiveTab] = useState<Tab>(route?.params?.initialTab ?? 'liste');
 
   const householdId: string = profile?.householdId ?? '';
   const collectionPath = `households/${householdId}/familyList`;
@@ -74,6 +75,7 @@ export default function FamilyListScreen() {
           groups={groups}
           currentUserId={user.uid}
           onAddItem={(item) => addFamilyItem(householdId, item)}
+          onUpdateItem={(id, fields) => updateItem(collectionPath, id, fields)}
           onDeleteItem={(id) => deleteItem(collectionPath, id)}
           onAddGroup={(name) => addFamilyGroup(householdId, name)}
           onDeleteGroup={(groupId) => deleteFamilyGroup(householdId, groupId)}
