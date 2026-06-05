@@ -54,8 +54,62 @@ const SECTIONS: Section[] = [
         answer: 'Le stock est la quantité disponible à la maison. Le seuil est le minimum en dessous duquel l\'article bascule automatiquement dans "À acheter". Ces champs sont optionnels — sans seuil, l\'article fonctionne avec la simple checkbox.',
       },
       {
+        question: 'Modifier un article existant',
+        answer: 'Appuyez sur l\'article (icône ✏️) pour modifier son nom, son groupe, son unité, son stock ou son seuil d\'alerte.',
+      },
+      {
         question: 'Supprimer un article ou un groupe',
         answer: 'Appuyez sur le × à droite de l\'article ou du groupe. Un groupe supprimé retire également tous ses articles.',
+      },
+    ],
+  },
+  {
+    id: 'recettes',
+    emoji: '🍳',
+    title: 'Les Recettes',
+    content: [
+      {
+        question: 'Créer une recette',
+        answer: 'Dans l\'onglet Recettes, appuyez sur "+ Nouvelle". Donnez-lui un nom et une description optionnelle, puis validez.',
+      },
+      {
+        question: 'Ajouter des ingrédients',
+        answer: 'Ouvrez une recette et appuyez sur le bouton +. Un écran s\'ouvre avec vos articles classés par groupe. Saisissez une quantité (optionnel) et sélectionnez l\'article. La couleur indique sa disponibilité : 🟢 à la casa, ⚪ en liste à acheter.',
+      },
+      {
+        question: 'Modifier la quantité d\'un ingrédient',
+        answer: 'Dans le détail d\'une recette, appuyez sur l\'ingrédient (icône ✏️). Une boîte de dialogue s\'ouvre pour modifier la quantité.',
+      },
+      {
+        question: 'Article non trouvé dans la liste ?',
+        answer: 'Si l\'article n\'existe pas encore, appuyez sur "⚙️ Aller au Paramétrage" pour l\'ajouter. Revenez ensuite sur la recette — il apparaîtra dans la liste.',
+      },
+      {
+        question: 'Supprimer un ingrédient ou une recette',
+        answer: 'Pour un ingrédient : appuyez sur le ✕ à droite dans le détail. Pour une recette : appuyez sur l\'icône 🗑 dans la liste des recettes.',
+      },
+    ],
+  },
+  {
+    id: 'menu',
+    emoji: '📅',
+    title: 'Plat de la semaine',
+    content: [
+      {
+        question: 'Composer le menu de la semaine',
+        answer: 'Dans l\'onglet Menu, appuyez sur "+ Ajouter" pour choisir parmi vos recettes. Les plats sélectionnés apparaissent dans la liste du menu.',
+      },
+      {
+        question: 'Articles à acheter pour le menu',
+        answer: 'La section "Articles à acheter" liste automatiquement les ingrédients de vos plats qui sont marqués "À acheter" dans votre liste. Si tout est disponible à la casa, un message 🎉 s\'affiche.',
+      },
+      {
+        question: 'Retirer un plat du menu',
+        answer: 'Appuyez sur le ✕ à droite du plat dans la liste du menu.',
+      },
+      {
+        question: 'Refaire le menu',
+        answer: 'Le bouton "🔄 Refaire" en haut à droite vide tous les plats du menu d\'un coup. Le menu est partagé avec tous les membres du foyer.',
       },
     ],
   },

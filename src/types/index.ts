@@ -57,3 +57,18 @@ export interface Household {
   inviteCode: string;
   createdAt: Date;
 }
+
+export interface RecipeIngredient {
+  id: string;
+  name: string;
+  quantity?: string; // ex: "200g", "2", "1 pincée"
+}
+
+export interface Recipe {
+  id: string;
+  name: string;
+  description?: string;
+  ingredients: RecipeIngredient[];
+  createdBy: string;
+  createdAt: Date;
+}

@@ -10,16 +10,22 @@ interface Props {
   items: ShoppingItem[];
   groups: ShoppingGroup[];
   onAddItem: (item: Omit<ShoppingItem, 'id' | 'createdAt'>) => Promise<string>;
+  onUpdateItem: (id: string, fields: Partial<Pick<ShoppingItem, 'name' | 'unit' | 'groupId' | 'stock' | 'threshold'>>) => void;
   onDeleteItem: (itemId: string) => void;
   onAddGroup: (name: string) => void;
   onDeleteGroup: (groupId: string) => void;
   currentUserId: string;
 }
 
+type ItemModalMode = 'add' | 'edit';
+
 export default function FamilySettings({
-  items, groups, onAddItem, onDeleteItem, onAddGroup, onDeleteGroup, currentUserId,
+  items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onDeleteGroup, currentUserId,
 }: Props) {
   const [itemModalVisible, setItemModalVisible] = useState(false);
+  const [itemModalMode, setItemModalMode] = useState<ItemModalMode>('add');
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
   const [itemName, setItemName] = useState('');
@@ -29,6 +35,8 @@ export default function FamilySettings({
   const [newGroupName, setNewGroupName] = useState('');
 
   function openAddItem(groupId: string) {
+    setItemModalMode('add');
+    setEditingItem(null);
     setSelectedGroupId(groupId);
     setItemName('');
     setUnit('');
@@ -37,22 +45,45 @@ export default function FamilySettings({
     setItemModalVisible(true);
   }
 
-  async function handleAddItem() {
+  function openEditItem(item: ShoppingItem) {
+    setItemModalMode('edit');
+    setEditingItem(item);
+    setSelectedGroupId(item.groupId ?? '');
+    setItemName(item.name);
+    setUnit(item.unit ?? '');
+    setStock(item.stock !== undefined ? String(item.stock) : '');
+    setThreshold(item.threshold !== undefined ? String(item.threshold) : '');
+    setItemModalVisible(true);
+  }
+
+  async function handleSaveItem() {
     if (!itemName.trim()) return;
     const stockVal = stock.trim() !== '' ? parseInt(stock) : undefined;
     const thresholdVal = threshold.trim() !== '' ? parseInt(threshold) : undefined;
+
     try {
-      await onAddItem({
-        name: itemName.trim(),
-        category: 'autre',
-        quantity: 1,
-        unit: unit.trim(),
-        checked: false,
-        addedBy: currentUserId,
-        groupId: selectedGroupId,
-        stock: stockVal,
-        threshold: thresholdVal,
-      });
+      const groupId = selectedGroupId.trim() || undefined;
+      if (itemModalMode === 'edit' && editingItem) {
+        await onUpdateItem(editingItem.id, {
+          name: itemName.trim(),
+          unit: unit.trim() || undefined,
+          groupId,
+          stock: stockVal,
+          threshold: thresholdVal,
+        });
+      } else {
+        await onAddItem({
+          name: itemName.trim(),
+          category: 'autre',
+          quantity: 1,
+          unit: unit.trim() || undefined,
+          checked: false,
+          addedBy: currentUserId,
+          groupId,
+          stock: stockVal,
+          threshold: thresholdVal,
+        });
+      }
       setItemModalVisible(false);
     } catch (e: any) {
       Alert.alert('Erreur', e.message);
@@ -78,6 +109,13 @@ export default function FamilySettings({
     );
   }
 
+  function confirmDeleteItem(item: ShoppingItem) {
+    Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Supprimer', style: 'destructive', onPress: () => onDeleteItem(item.id) },
+    ]);
+  }
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
@@ -100,9 +138,15 @@ export default function FamilySettings({
                 <Text style={styles.emptyGroup}>Aucun article</Text>
               ) : (
                 groupItems.map((item) => (
-                  <View key={item.id} style={styles.itemRow}>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.itemRow}
+                    onPress={() => openEditItem(item)}
+                  >
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.itemName}>{item.name}{item.unit ? ` (${item.unit})` : ''}</Text>
+                      <Text style={styles.itemName}>
+                        {item.name}{item.unit ? ` (${item.unit})` : ''}
+                      </Text>
                       {item.threshold !== undefined && (
                         <Text style={styles.itemMeta}>
                           Seuil : {item.threshold}{item.unit ? ' ' + item.unit : ''}
@@ -110,17 +154,11 @@ export default function FamilySettings({
                         </Text>
                       )}
                     </View>
-                    <TouchableOpacity
-                      onPress={() =>
-                        Alert.alert('Supprimer', `Supprimer "${item.name}" ?`, [
-                          { text: 'Annuler', style: 'cancel' },
-                          { text: 'Supprimer', style: 'destructive', onPress: () => onDeleteItem(item.id) },
-                        ])
-                      }
-                    >
+                    <Text style={styles.editHint}>✏️</Text>
+                    <TouchableOpacity onPress={() => confirmDeleteItem(item)} style={styles.deleteBtnWrap}>
                       <Text style={styles.deleteBtn}>✕</Text>
                     </TouchableOpacity>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -169,30 +207,59 @@ export default function FamilySettings({
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Modal nouvel article */}
+      {/* Modal ajouter / modifier article */}
       <Modal visible={itemModalVisible} animationType="slide" transparent>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
           <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Ajouter un article</Text>
-            <Text style={styles.groupLabel}>
-              {groups.find((g) => g.id === selectedGroupId)?.name ?? ''}
+            <Text style={styles.modalTitle}>
+              {itemModalMode === 'edit' ? 'Modifier l\'article' : 'Ajouter un article'}
             </Text>
+
+            {/* Sélecteur de groupe */}
+            <Text style={styles.fieldLabel}>Groupe</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupChipsRow}>
+              <TouchableOpacity
+                style={[styles.groupChip, !selectedGroupId && styles.groupChipActive]}
+                onPress={() => setSelectedGroupId('')}
+              >
+                <Text style={[styles.groupChipText, !selectedGroupId && styles.groupChipTextActive]}>
+                  Aucun
+                </Text>
+              </TouchableOpacity>
+              {groups.map((g) => (
+                <TouchableOpacity
+                  key={g.id}
+                  style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipActive]}
+                  onPress={() => setSelectedGroupId(g.id)}
+                >
+                  <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextActive]}>
+                    {g.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <Text style={styles.fieldLabel}>Nom *</Text>
             <TextInput
               style={styles.input}
               placeholder="Nom de l'article"
               value={itemName}
               onChangeText={setItemName}
-              autoFocus
+              autoFocus={itemModalMode === 'add'}
             />
+
+            <Text style={styles.fieldLabel}>Unité</Text>
             <TextInput
               style={styles.input}
-              placeholder="Unité (kg, L, pièces…)"
+              placeholder="kg, L, pièces…"
               value={unit}
               onChangeText={setUnit}
             />
+
+            <Text style={styles.fieldLabel}>Stock & seuil</Text>
             <View style={styles.row}>
               <TextInput
                 style={[styles.input, { flex: 1, marginRight: SPACING.sm }]}
@@ -212,6 +279,7 @@ export default function FamilySettings({
             <Text style={styles.hint}>
               Ex : stock = 4, seuil = 2 → bascule dans "À acheter" quand il en reste 2
             </Text>
+
             <View style={styles.row}>
               <TouchableOpacity
                 style={[styles.button, styles.cancelButton]}
@@ -219,8 +287,10 @@ export default function FamilySettings({
               >
                 <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAddItem}>
-                <Text style={styles.addButtonText}>Ajouter</Text>
+              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleSaveItem}>
+                <Text style={styles.addButtonText}>
+                  {itemModalMode === 'edit' ? 'Enregistrer' : 'Ajouter'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -281,8 +351,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  itemName: { flex: 1, fontSize: FONT_SIZE.lg, color: COLORS.text },
-  deleteBtn: { color: COLORS.textSecondary, fontSize: FONT_SIZE.lg, paddingLeft: SPACING.sm },
+  itemName: { fontSize: FONT_SIZE.lg, color: COLORS.text },
+  itemMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
+  editHint: { fontSize: FONT_SIZE.md, marginRight: SPACING.sm },
+  deleteBtnWrap: { paddingLeft: SPACING.sm },
+  deleteBtn: { color: COLORS.textSecondary, fontSize: FONT_SIZE.lg },
   empty: { alignItems: 'center', marginTop: 80 },
   emptyText: { fontSize: FONT_SIZE.xl, marginBottom: SPACING.xs },
   emptySubtext: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary },
@@ -303,19 +376,28 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   fabText: { color: '#fff', fontSize: 28, fontWeight: '300', lineHeight: 32 },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modal: {
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: BORDER_RADIUS.lg,
     borderTopRightRadius: BORDER_RADIUS.lg,
     padding: SPACING.xl,
   },
-  modalTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
-  groupLabel: { fontSize: FONT_SIZE.md, color: COLORS.primary, fontWeight: '600', marginBottom: SPACING.md },
+  modalTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
+  fieldLabel: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: SPACING.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+  groupChipsRow: { marginBottom: SPACING.md },
+  groupChip: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs + 2,
+    marginRight: SPACING.sm,
+    backgroundColor: COLORS.surface,
+  },
+  groupChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  groupChipText: { fontSize: FONT_SIZE.md, color: COLORS.text, fontWeight: '600' },
+  groupChipTextActive: { color: '#fff' },
   input: {
     backgroundColor: COLORS.background,
     borderWidth: 1,
@@ -333,5 +415,4 @@ const styles = StyleSheet.create({
   cancelButtonText: { color: COLORS.text, fontSize: FONT_SIZE.lg },
   addButtonText: { color: '#fff', fontSize: FONT_SIZE.lg, fontWeight: '600' },
   hint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, fontStyle: 'italic' },
-  itemMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
 });
