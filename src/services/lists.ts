@@ -92,6 +92,22 @@ export async function toggleItem(collectionPath: string, itemId: string, checked
   await updateDoc(doc(db, collectionPath, itemId), { checked });
 }
 
+// Ajoute qty au stock existant.
+// Si nouveau total > seuil → passe À la casa. Sinon reste À acheter avec stock mis à jour.
+export async function checkItemWithStock(
+  collectionPath: string,
+  itemId: string,
+  addedQty: number,
+  currentStock: number,
+  threshold: number
+) {
+  const newStock = currentStock + addedQty;
+  await updateDoc(doc(db, collectionPath, itemId), {
+    stock: newStock,
+    checked: newStock > threshold,
+  });
+}
+
 export async function decrementStock(collectionPath: string, item: ShoppingItem) {
   const newStock = (item.stock ?? 1) - 1;
   const threshold = item.threshold ?? 0;

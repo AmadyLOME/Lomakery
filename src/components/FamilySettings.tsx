@@ -72,12 +72,17 @@ export default function FamilySettings({
           threshold: thresholdVal,
         });
       } else {
+        // Si stock > seuil dès la création → directement À la casa
+        const isAvailable =
+          stockVal !== undefined && thresholdVal !== undefined
+            ? stockVal > thresholdVal
+            : false;
         await onAddItem({
           name: itemName.trim(),
           category: 'autre',
           quantity: 1,
           unit: unit.trim() || undefined,
-          checked: false,
+          checked: isAvailable,
           addedBy: currentUserId,
           groupId,
           stock: stockVal,

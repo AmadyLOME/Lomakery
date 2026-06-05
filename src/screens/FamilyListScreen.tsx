@@ -10,6 +10,7 @@ import {
   toggleItem,
   deleteItem,
   updateItem,
+  checkItemWithStock,
   decrementStock,
   incrementStock,
 } from '../services/lists';
@@ -66,6 +67,7 @@ export default function FamilyListScreen({ route }: any) {
           items={items}
           groups={groups}
           onToggle={(id, checked) => toggleItem(collectionPath, id, checked)}
+          onCheckWithStock={(id, addedQty, currentStock, threshold) => checkItemWithStock(collectionPath, id, addedQty, currentStock, threshold)}
           onDecrement={(item) => decrementStock(collectionPath, item)}
           onIncrement={(item) => incrementStock(collectionPath, item)}
         />

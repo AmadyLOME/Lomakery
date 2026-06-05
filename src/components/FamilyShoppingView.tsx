@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
 } from 'react-native';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -9,13 +9,14 @@ interface Props {
   items: ShoppingItem[];
   groups: ShoppingGroup[];
   onToggle: (itemId: string, checked: boolean) => void;
+  onCheckWithStock: (itemId: string, addedQty: number, currentStock: number, threshold: number) => void;
   onDecrement: (item: ShoppingItem) => void;
   onIncrement: (item: ShoppingItem) => void;
 }
 
 type ActiveView = 'acheter' | 'dispo';
 
-export default function FamilyShoppingView({ items, groups, onToggle, onDecrement, onIncrement }: Props) {
+export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement }: Props) {
   const [activeView, setActiveView] = useState<ActiveView>('acheter');
 
   const aAcheter = items.filter((i) => !i.checked);
@@ -31,6 +32,28 @@ export default function FamilyShoppingView({ items, groups, onToggle, onDecremen
     (i) => !i.groupId || !groups.find((g) => g.id === i.groupId)
   );
 
+  function handleCheckboxPress(item: ShoppingItem) {
+    const hasThreshold = item.threshold !== undefined;
+    // Passage À acheter → À la casa avec seuil : demander la quantité achetée
+    if (!item.checked && hasThreshold) {
+      Alert.prompt(
+        `${item.name}`,
+        `Combien en avez-vous acheté ?${item.unit ? ` (${item.unit})` : ''}\nStock actuel : ${item.stock ?? 0} · Seuil : ${item.threshold}`,
+        (input) => {
+          const qty = parseInt(input, 10);
+          if (!isNaN(qty) && qty > 0) {
+            onCheckWithStock(item.id, qty, item.stock ?? 0, item.threshold!);
+          }
+        },
+        'plain-text',
+        String(item.stock ?? 0),
+        'numeric'
+      );
+    } else {
+      onToggle(item.id, !item.checked);
+    }
+  }
+
   function renderItem(item: ShoppingItem) {
     const hasStock = item.stock !== undefined && item.threshold !== undefined;
     const isLow = hasStock && item.stock! <= item.threshold!;
@@ -39,7 +62,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onDecremen
       <View key={item.id} style={styles.itemRow}>
         <TouchableOpacity
           style={[styles.checkbox, item.checked && styles.checkboxChecked]}
-          onPress={() => onToggle(item.id, !item.checked)}
+          onPress={() => handleCheckboxPress(item)}
         >
           {item.checked && <Text style={styles.checkmark}>✓</Text>}
         </TouchableOpacity>
