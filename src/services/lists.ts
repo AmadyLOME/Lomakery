@@ -37,6 +37,10 @@ export async function addFamilyGroup(householdId: string, name: string): Promise
   return ref.id;
 }
 
+export async function updateFamilyGroup(householdId: string, groupId: string, name: string) {
+  await updateDoc(doc(db, 'households', householdId, 'familyGroups', groupId), { name });
+}
+
 export async function deleteFamilyGroup(householdId: string, groupId: string) {
   await deleteDoc(doc(db, 'households', householdId, 'familyGroups', groupId));
 }

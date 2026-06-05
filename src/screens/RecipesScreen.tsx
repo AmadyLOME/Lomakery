@@ -50,6 +50,15 @@ function IngredientPickerView({
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState('');
   const [qty, setQty] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  function toggleGroup(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const existingNames = existingIngredients.map((i) => i.name.toLowerCase().trim());
 
@@ -135,14 +144,25 @@ function IngredientPickerView({
           <Text style={styles.pickerHint}>Aucun article trouvé pour « {search.trim()} »</Text>
         )}
 
-        {grouped.map(({ group, items }) => (
-          <View key={group?.id ?? '__ungrouped'}>
-            {group && (
-              <Text style={styles.pickerGroupHeader}>📦 {group.name}</Text>
-            )}
-            {items.map(renderItem)}
-          </View>
-        ))}
+        {grouped.map(({ group, items }) => {
+          const groupId = group?.id ?? '__ungrouped';
+          const isCollapsed = collapsedGroups.has(groupId);
+          return (
+            <View key={groupId}>
+              {group && (
+                <TouchableOpacity
+                  style={styles.pickerGroupHeaderRow}
+                  onPress={() => toggleGroup(groupId)}
+                >
+                  <Text style={styles.pickerGroupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
+                  <Text style={styles.pickerGroupHeader}>📦 {group.name}</Text>
+                  <Text style={styles.pickerGroupCount}>{items.length}</Text>
+                </TouchableOpacity>
+              )}
+              {!isCollapsed && items.map(renderItem)}
+            </View>
+          );
+        })}
 
         {/* Bouton Paramétrage — toujours visible en bas */}
         <TouchableOpacity style={styles.goToSettingsBtn} onPress={goToSettings}>
@@ -609,17 +629,34 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
   },
-  pickerGroupHeader: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
+  pickerGroupHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surfaceWarm,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs + 2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    gap: SPACING.xs,
+  },
+  pickerGroupChevron: { fontSize: 11, color: COLORS.textSecondary },
+  pickerGroupHeader: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  pickerGroupCount: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    backgroundColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    overflow: 'hidden',
   },
   goToSettingsBtn: {
     margin: SPACING.md,

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput,
 } from 'react-native';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -18,23 +18,36 @@ type ActiveView = 'acheter' | 'dispo';
 
 export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement }: Props) {
   const [activeView, setActiveView] = useState<ActiveView>('acheter');
+  const [search, setSearch] = useState('');
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const aAcheter = items.filter((i) => !i.checked);
   const disponible = items.filter((i) => i.checked);
-
   const displayed = activeView === 'acheter' ? aAcheter : disponible;
 
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return q ? displayed.filter((i) => i.name.toLowerCase().includes(q)) : displayed;
+  }, [displayed, search]);
+
   const grouped = groups
-    .map((g) => ({ group: g, groupItems: displayed.filter((i) => i.groupId === g.id) }))
+    .map((g) => ({ group: g, groupItems: filtered.filter((i) => i.groupId === g.id) }))
     .filter((s) => s.groupItems.length > 0);
 
-  const ungrouped = displayed.filter(
+  const ungrouped = filtered.filter(
     (i) => !i.groupId || !groups.find((g) => g.id === i.groupId)
   );
 
+  function toggleGroup(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
   function handleCheckboxPress(item: ShoppingItem) {
     const hasThreshold = item.threshold !== undefined;
-    // Passage À acheter → À la casa avec seuil : demander la quantité achetée
     if (!item.checked && hasThreshold) {
       Alert.prompt(
         `${item.name}`,
@@ -99,13 +112,27 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
     );
   }
 
+  function renderGroup(groupId: string, label: string, groupItems: ShoppingItem[]) {
+    const isCollapsed = collapsedGroups.has(groupId);
+    return (
+      <View key={groupId} style={styles.card}>
+        <TouchableOpacity style={styles.groupHeader} onPress={() => toggleGroup(groupId)}>
+          <Text style={styles.groupName}>{label}</Text>
+          <Text style={styles.groupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
+          <Text style={styles.groupCount}>{groupItems.length}</Text>
+        </TouchableOpacity>
+        {!isCollapsed && groupItems.map(renderItem)}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Toggle À acheter / Disponible */}
+      {/* Toggle À acheter / À la casa */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           style={[styles.toggleBtn, activeView === 'acheter' && styles.toggleBtnActive]}
-          onPress={() => setActiveView('acheter')}
+          onPress={() => { setActiveView('acheter'); setSearch(''); }}
         >
           <Text style={[styles.toggleText, activeView === 'acheter' && styles.toggleTextActive]}>
             🛒 À acheter
@@ -121,7 +148,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
 
         <TouchableOpacity
           style={[styles.toggleBtn, activeView === 'dispo' && styles.toggleBtnDispoActive]}
-          onPress={() => setActiveView('dispo')}
+          onPress={() => { setActiveView('dispo'); setSearch(''); }}
         >
           <Text style={[styles.toggleText, activeView === 'dispo' && styles.toggleTextDispoActive]}>
             🏠 À la casa
@@ -136,29 +163,36 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40, paddingTop: SPACING.md }}>
-        {grouped.length === 0 && ungrouped.length === 0 ? (
+      {/* Barre de recherche */}
+      <View style={styles.searchRow}>
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Rechercher un article…"
+          placeholderTextColor={COLORS.textSecondary}
+          value={search}
+          onChangeText={setSearch}
+          clearButtonMode="while-editing"
+        />
+      </View>
+
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>
-              {activeView === 'acheter' ? '🎉' : '🏠'}
+              {search ? '🔍' : activeView === 'acheter' ? '🎉' : '🏠'}
             </Text>
             <Text style={styles.emptyText}>
-              {activeView === 'acheter' ? 'Rien à acheter !' : 'Rien à la casa'}
+              {search
+                ? `Aucun article pour "${search}"`
+                : activeView === 'acheter' ? 'Rien à acheter !' : 'Rien à la casa'}
             </Text>
           </View>
         ) : (
           <>
-            {grouped.map(({ group, groupItems }) => (
-              <View key={group.id} style={styles.card}>
-                <Text style={styles.groupName}>📦 {group.name}</Text>
-                {groupItems.map(renderItem)}
-              </View>
-            ))}
-            {ungrouped.length > 0 && (
-              <View style={styles.card}>
-                {ungrouped.map(renderItem)}
-              </View>
+            {grouped.map(({ group, groupItems }) =>
+              renderGroup(group.id, `📦 ${group.name}`, groupItems)
             )}
+            {ungrouped.length > 0 && renderGroup('__ungrouped', 'Autres', ungrouped)}
           </>
         )}
       </ScrollView>
@@ -172,6 +206,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row',
     margin: SPACING.md,
+    marginBottom: SPACING.sm,
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
     padding: 4,
@@ -190,17 +225,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.sm,
     gap: SPACING.xs,
   },
-  toggleBtnActive: {
-    backgroundColor: COLORS.primary,
-  },
-  toggleBtnDispoActive: {
-    backgroundColor: COLORS.green,
-  },
-  toggleText: {
-    fontSize: FONT_SIZE.md,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
+  toggleBtnActive: { backgroundColor: COLORS.primary },
+  toggleBtnDispoActive: { backgroundColor: COLORS.green },
+  toggleText: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textSecondary },
   toggleTextActive: { color: '#fff' },
   toggleTextDispoActive: { color: '#fff' },
 
@@ -218,6 +245,21 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
   badgeTextActive: { color: '#fff' },
 
+  searchRow: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontSize: FONT_SIZE.md,
+    color: COLORS.text,
+  },
+
   card: {
     marginHorizontal: SPACING.md,
     marginBottom: SPACING.md,
@@ -230,18 +272,35 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  groupName: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    color: COLORS.mustard,
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     backgroundColor: COLORS.surfaceWarm,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  groupName: {
+    flex: 1,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.mustard,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  groupChevron: { fontSize: 11, color: COLORS.textSecondary, marginRight: SPACING.xs },
+  groupCount: {
+    fontSize: FONT_SIZE.sm,
+    fontWeight: '700',
+    color: COLORS.textSecondary,
+    backgroundColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    overflow: 'hidden',
+  },
+
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -251,9 +310,9 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
   },
   checkbox: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: COLORS.primary,
     marginRight: SPACING.md,
@@ -261,7 +320,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  checkmark: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  checkmark: { color: '#fff', fontSize: 13, fontWeight: '700' },
   itemName: { fontSize: FONT_SIZE.lg, color: COLORS.text },
   itemNameChecked: { color: COLORS.textSecondary },
   stockInfo: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
@@ -280,5 +339,5 @@ const styles = StyleSheet.create({
   stockValue: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, minWidth: 28, textAlign: 'center' },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
-  emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.textSecondary },
+  emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.textSecondary, textAlign: 'center' },
 });

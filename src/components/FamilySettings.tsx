@@ -13,6 +13,7 @@ interface Props {
   onUpdateItem: (id: string, fields: Partial<Pick<ShoppingItem, 'name' | 'unit' | 'groupId' | 'stock' | 'threshold'>>) => void;
   onDeleteItem: (itemId: string) => void;
   onAddGroup: (name: string) => void;
+  onUpdateGroup: (groupId: string, name: string) => void;
   onDeleteGroup: (groupId: string) => void;
   currentUserId: string;
 }
@@ -20,11 +21,12 @@ interface Props {
 type ItemModalMode = 'add' | 'edit';
 
 export default function FamilySettings({
-  items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onDeleteGroup, currentUserId,
+  items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onUpdateGroup, onDeleteGroup, currentUserId,
 }: Props) {
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [itemModalMode, setItemModalMode] = useState<ItemModalMode>('add');
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -33,6 +35,29 @@ export default function FamilySettings({
   const [stock, setStock] = useState('');
   const [threshold, setThreshold] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
+
+  function renameGroup(group: ShoppingGroup) {
+    Alert.prompt(
+      'Renommer le groupe',
+      '',
+      (newName) => {
+        const trimmed = newName.trim();
+        if (trimmed && trimmed !== group.name) {
+          onUpdateGroup(group.id, trimmed);
+        }
+      },
+      'plain-text',
+      group.name
+    );
+  }
+
+  function toggleGroup(id: string) {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   function openAddItem(groupId: string) {
     setItemModalMode('add');
@@ -126,10 +151,20 @@ export default function FamilySettings({
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         {groups.map((group) => {
           const groupItems = items.filter((i) => i.groupId === group.id);
+          const isCollapsed = collapsedGroups.has(group.id);
           return (
             <View key={group.id} style={styles.section}>
-              <View style={styles.sectionHeaderRow}>
-                <Text style={styles.sectionHeader}>📦 {group.name}</Text>
+              <TouchableOpacity
+                style={styles.sectionHeaderRow}
+                onPress={() => toggleGroup(group.id)}
+                onLongPress={() => renameGroup(group)}
+              >
+                <Text style={styles.groupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.sectionHeader}>📦 {group.name}</Text>
+                  <Text style={styles.renameHint}>Appui long pour renommer</Text>
+                </View>
+                <Text style={styles.groupItemCount}>{groupItems.length}</Text>
                 <View style={styles.sectionActions}>
                   <TouchableOpacity style={styles.addItemBtn} onPress={() => openAddItem(group.id)}>
                     <Text style={styles.addItemBtnText}>+ Article</Text>
@@ -138,33 +173,35 @@ export default function FamilySettings({
                     <Text style={styles.deleteGroupBtn}>✕</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-              {groupItems.length === 0 ? (
-                <Text style={styles.emptyGroup}>Aucun article</Text>
-              ) : (
-                groupItems.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.itemRow}
-                    onPress={() => openEditItem(item)}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.itemName}>
-                        {item.name}{item.unit ? ` (${item.unit})` : ''}
-                      </Text>
-                      {item.threshold !== undefined && (
-                        <Text style={styles.itemMeta}>
-                          Seuil : {item.threshold}{item.unit ? ' ' + item.unit : ''}
-                          {item.stock !== undefined ? `  •  Stock : ${item.stock}` : ''}
+              </TouchableOpacity>
+              {!isCollapsed && (
+                groupItems.length === 0 ? (
+                  <Text style={styles.emptyGroup}>Aucun article</Text>
+                ) : (
+                  groupItems.map((item) => (
+                    <TouchableOpacity
+                      key={item.id}
+                      style={styles.itemRow}
+                      onPress={() => openEditItem(item)}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.itemName}>
+                          {item.name}{item.unit ? ` (${item.unit})` : ''}
                         </Text>
-                      )}
-                    </View>
-                    <Text style={styles.editHint}>✏️</Text>
-                    <TouchableOpacity onPress={() => confirmDeleteItem(item)} style={styles.deleteBtnWrap}>
-                      <Text style={styles.deleteBtn}>✕</Text>
+                        {item.threshold !== undefined && (
+                          <Text style={styles.itemMeta}>
+                            Seuil : {item.threshold}{item.unit ? ' ' + item.unit : ''}
+                            {item.stock !== undefined ? `  •  Stock : ${item.stock}` : ''}
+                          </Text>
+                        )}
+                      </View>
+                      <Text style={styles.editHint}>✏️</Text>
+                      <TouchableOpacity onPress={() => confirmDeleteItem(item)} style={styles.deleteBtnWrap}>
+                        <Text style={styles.deleteBtn}>✕</Text>
+                      </TouchableOpacity>
                     </TouchableOpacity>
-                  </TouchableOpacity>
-                ))
+                  ))
+                )
               )}
             </View>
           );
@@ -330,6 +367,19 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   sectionHeader: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
+  renameHint: { fontSize: 10, color: COLORS.border, marginTop: 1 },
+  groupChevron: { fontSize: 11, color: COLORS.textSecondary, marginRight: SPACING.xs },
+  groupItemCount: {
+    fontSize: FONT_SIZE.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
+    backgroundColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    overflow: 'hidden',
+    marginRight: SPACING.sm,
+  },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   addItemBtn: {
     backgroundColor: COLORS.mustard,

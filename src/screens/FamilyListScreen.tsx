@@ -6,6 +6,7 @@ import {
   subscribeToFamilyGroups,
   addFamilyItem,
   addFamilyGroup,
+  updateFamilyGroup,
   deleteFamilyGroup,
   toggleItem,
   deleteItem,
@@ -80,6 +81,7 @@ export default function FamilyListScreen({ route }: any) {
           onUpdateItem={(id, fields) => updateItem(collectionPath, id, fields)}
           onDeleteItem={(id) => deleteItem(collectionPath, id)}
           onAddGroup={(name) => addFamilyGroup(householdId, name)}
+          onUpdateGroup={(groupId, name) => updateFamilyGroup(householdId, groupId, name)}
           onDeleteGroup={(groupId) => deleteFamilyGroup(householdId, groupId)}
         />
       )}
