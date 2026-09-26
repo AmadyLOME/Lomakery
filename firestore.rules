@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Vérifie si l'utilisateur est membre du foyer
+    function isMember(householdId) {
+      return signedIn()
+          && request.auth.uid in get(/databases/$(database)/documents/households/$(householdId)).data.members;
+    }
+
+    // Profils utilisateurs : chacun lit/écrit le sien
+    match /users/{userId} {
+      allow read, write: if signedIn() && request.auth.uid == userId;
+
+      // Liste personnelle (sous-collection)
+      match /personalList/{itemId} {
+        allow read, write: if signedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // Codes d'invitation : invites/{code} → { householdId }
+    // On ne peut lire un code que si on le connaît (get), jamais lister.
+    match /invites/{code} {
+      allow get: if signedIn();
+      allow list: if false;
+
+      // Créé par un membre du foyer, uniquement pour le code du foyer
+      // (getAfter : fonctionne aussi dans le batch qui crée le foyer)
+      allow create: if signedIn()
+                    && request.resource.data.keys().hasOnly(['householdId'])
+                    && request.auth.uid in getAfter(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.members
+                    && getAfter(/databases/$(database)/documents/households/$(request.resource.data.householdId)).data.inviteCode == code;
+
+      allow update: if false;
+      allow delete: if isMember(resource.data.householdId);
+    }
+
+    // Foyers
+    match /households/{householdId} {
+      // Lecture : membres uniquement
+      allow read: if signedIn() && request.auth.uid in resource.data.members;
+
+      // Création : le créateur est le seul membre
+      allow create: if signedIn()
+                    && request.resource.data.members == [request.auth.uid];
+
+      allow update: if signedIn() && (
+        // Membre : peut modifier le foyer et se retirer, mais pas ajouter
+        // ni retirer d'autres membres
+        (
+          request.auth.uid in resource.data.members
+          && request.resource.data.members.toSet().difference(resource.data.members.toSet()).size() == 0
+          && resource.data.members.toSet().difference(request.resource.data.members.toSet()).hasOnly([request.auth.uid])
+        )
+        ||
+        // Non-membre qui rejoint : ne touche qu'à `members` et n'y ajoute que lui-même
+        // (l'id du foyer n'est obtenable qu'avec le code d'invitation)
+        (
+          !(request.auth.uid in resource.data.members)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['members'])
+          && request.resource.data.members.toSet() == resource.data.members.toSet().union([request.auth.uid].toSet())
+        )
+      );
+
+      // Suppression : membre uniquement
+      allow delete: if isMember(householdId);
+
+      // Groupes familiaux (familyGroups)
+      match /familyGroups/{groupId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Liste familiale (familyList)
+      match /familyList/{itemId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Recettes
+      match /recipes/{recipeId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Menu de la semaine
+      match /weekMenu/{docId} {
+        allow read, write: if isMember(householdId);
+      }
+    }
+  }
+}
