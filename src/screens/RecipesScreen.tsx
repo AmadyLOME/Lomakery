@@ -8,11 +8,11 @@ import {
   Alert,
   Modal,
   StyleSheet,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients } from '../services/recipes';
@@ -366,7 +366,7 @@ export default function RecipesScreen() {
   }, [recipes]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mes Recettes</Text>
@@ -480,7 +480,7 @@ export default function RecipesScreen() {
           onClose={() => setSelectedRecipe(null)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

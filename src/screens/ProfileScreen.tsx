@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, Alert, Clipboard,
+  View, Text, StyleSheet, TouchableOpacity, Share, Alert,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/auth';
@@ -30,7 +31,7 @@ export default function ProfileScreen() {
 
   function copyInviteCode() {
     if (!household) return;
-    Clipboard.setString(household.inviteCode);
+    Clipboard.setStringAsync(household.inviteCode);
     Alert.alert('Copié !', `Le code ${household.inviteCode} a été copié dans le presse-papiers.`);
   }
 

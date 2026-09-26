@@ -4,11 +4,11 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   Modal,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToWeekMenu, addToWeekMenu, removeFromWeekMenu, resetWeekMenu } from '../services/weekMenu';
 import { subscribeToRecipes } from '../services/recipes';
@@ -89,7 +89,7 @@ export default function WeekMenuScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Plat de la semaine</Text>
@@ -243,7 +243,7 @@ export default function WeekMenuScreen() {
           </ScrollView>
         </SafeAreaView>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
