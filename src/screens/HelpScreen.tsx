@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { moderateScale } from '../utils/responsive';
 
 interface Section {
   id: string;
@@ -173,7 +174,7 @@ export default function HelpScreen() {
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
       <View style={styles.hero}>
         <Text style={styles.heroEmoji}>💡</Text>
-        <Text style={styles.heroTitle}>Comment utiliser Lomakery</Text>
+        <Text style={styles.heroTitle}>Comment utiliser TeninGrocery</Text>
         <Text style={styles.heroSubtitle}>
           Tout ce qu'il faut savoir pour gérer vos courses en famille.
         </Text>
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     paddingBottom: SPACING.lg,
   },
-  heroEmoji: { fontSize: 48, marginBottom: SPACING.sm },
+  heroEmoji: { fontSize: moderateScale(48), marginBottom: SPACING.sm },
   heroTitle: {
     fontSize: FONT_SIZE.xxl,
     fontWeight: '700',

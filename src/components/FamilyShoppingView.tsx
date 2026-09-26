@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 interface Props {
   items: ShoppingItem[];
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
 
   badge: {
     minWidth: 20,
-    height: 20,
+    height: scale(20),
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
@@ -242,7 +243,7 @@ const styles = StyleSheet.create({
   badgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
   badgeDispoActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
   badgeInactive: { backgroundColor: COLORS.border },
-  badgeText: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
+  badgeText: { fontSize: moderateScale(11), fontWeight: '700', color: COLORS.textSecondary },
   badgeTextActive: { color: '#fff' },
 
   searchRow: {
@@ -289,7 +290,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  groupChevron: { fontSize: 11, color: COLORS.textSecondary, marginRight: SPACING.xs },
+  groupChevron: { fontSize: moderateScale(11), color: COLORS.textSecondary, marginRight: SPACING.xs },
   groupCount: {
     fontSize: FONT_SIZE.sm,
     fontWeight: '700',
@@ -310,8 +311,8 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: scale(24),
+    height: scale(24),
     borderRadius: 12,
     borderWidth: 2,
     borderColor: COLORS.primary,
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  checkmark: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  checkmark: { color: '#fff', fontSize: moderateScale(13), fontWeight: '700' },
   itemName: { fontSize: FONT_SIZE.lg, color: COLORS.text },
   itemNameChecked: { color: COLORS.textSecondary },
   stockInfo: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
@@ -328,16 +329,16 @@ const styles = StyleSheet.create({
   moveHint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginLeft: SPACING.xs },
   stockControls: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   stockBtn: {
-    width: 30,
-    height: 30,
+    width: scale(30),
+    height: scale(30),
     borderRadius: 15,
     backgroundColor: COLORS.mustard,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stockBtnText: { color: '#fff', fontSize: 18, fontWeight: '700', lineHeight: 22 },
+  stockBtnText: { color: '#fff', fontSize: moderateScale(18), fontWeight: '700', lineHeight: moderateScale(22) },
   stockValue: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, minWidth: 28, textAlign: 'center' },
   empty: { alignItems: 'center', marginTop: 60 },
-  emptyEmoji: { fontSize: 48, marginBottom: SPACING.md },
+  emptyEmoji: { fontSize: moderateScale(48), marginBottom: SPACING.md },
   emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.textSecondary, textAlign: 'center' },
 });

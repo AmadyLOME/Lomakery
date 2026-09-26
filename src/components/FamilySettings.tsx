@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 interface Props {
   items: ShoppingItem[];
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   sectionHeader: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
-  renameHint: { fontSize: 10, color: COLORS.border, marginTop: 1 },
+  renameHint: { fontSize: moderateScale(10), color: COLORS.border, marginTop: 1 },
   groupChevron: { fontSize: 11, color: COLORS.textSecondary, marginRight: SPACING.xs },
   groupItemCount: {
     fontSize: FONT_SIZE.sm,
@@ -418,8 +419,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 24,
     right: 24,
-    width: 56,
-    height: 56,
+    width: scale(56),
+    height: scale(56),
     borderRadius: 28,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
@@ -430,7 +431,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
-  fabText: { color: '#fff', fontSize: 28, fontWeight: '300', lineHeight: 32 },
+  fabText: { color: '#fff', fontSize: moderateScale(28), fontWeight: '300', lineHeight: moderateScale(32) },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modal: {
     backgroundColor: COLORS.surface,

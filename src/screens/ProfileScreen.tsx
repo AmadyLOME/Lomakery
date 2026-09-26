@@ -8,6 +8,7 @@ import { logout } from '../services/auth';
 import { getHousehold } from '../services/household';
 import { Household } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 export default function ProfileScreen() {
   const { user, profile } = useAuth();
@@ -23,7 +24,7 @@ export default function ProfileScreen() {
   async function shareInviteCode() {
     if (!household) return;
     await Share.share({
-      message: `Rejoins notre liste de courses sur Lomakery ! Code : ${household.inviteCode}`,
+      message: `Rejoins notre liste de courses sur TeninGrocery ! Code : ${household.inviteCode}`,
     });
   }
 
@@ -101,9 +102,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: scale(80),
+    height: scale(80),
+    borderRadius: scale(40),
     backgroundColor: COLORS.green,
     alignItems: 'center',
     justifyContent: 'center',
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: COLORS.mustard,
   },
-  avatarText: { color: '#fff', fontSize: 32, fontWeight: '700' },
+  avatarText: { color: '#fff', fontSize: moderateScale(32), fontWeight: '700' },
   name: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
   email: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 2 },
   sectionTitle: {

@@ -19,6 +19,7 @@ import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients } 
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, RecipeIngredient, ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 type IngredientStatus = 'available' | 'missing' | 'unknown';
 
@@ -114,7 +115,7 @@ function IngredientPickerView({
           <Text style={styles.backBtnText}>← Retour</Text>
         </TouchableOpacity>
         <Text style={styles.modalTitle}>Ajouter un ingrédient</Text>
-        <View style={{ width: 80 }} />
+        <View style={{ width: scale(80) }} />
       </View>
 
       <View style={styles.pickerQtyRow}>
@@ -259,7 +260,7 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
                 <Text style={styles.backBtnText}>← Retour</Text>
               </TouchableOpacity>
               <Text style={styles.modalTitle} numberOfLines={1}>{recipe.name}</Text>
-              <View style={{ width: 80 }} />
+              <View style={{ width: scale(80) }} />
             </View>
 
             {recipe.description ? (
@@ -507,7 +508,7 @@ const styles = StyleSheet.create({
   createBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT_SIZE.md },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
-  emptyEmoji: { fontSize: 56, marginBottom: SPACING.md },
+  emptyEmoji: { fontSize: moderateScale(56), marginBottom: SPACING.md },
   emptyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.xs },
   emptySubtitle: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center' },
 
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  backBtn: { width: 80 },
+  backBtn: { width: scale(80) },
   backBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.md },
   modalTitle: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
 
@@ -611,8 +612,8 @@ const styles = StyleSheet.create({
   },
   addIngBtn: {
     backgroundColor: COLORS.primary,
-    width: 48,
-    height: 48,
+    width: scale(48),
+    height: scale(48),
     borderRadius: BORDER_RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { login } from '../services/auth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -85,9 +86,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   logoImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 24,
+    width: scale(120),
+    height: scale(120),
+    borderRadius: moderateScale(24),
   },
   tagline: {
     marginTop: SPACING.sm,

@@ -57,7 +57,7 @@ function MainTabs() {
         name="FamilyList"
         component={FamilyListScreen}
         options={{
-          title: 'Lomakery',
+          title: 'TeninGrocery',
           tabBarLabel: 'Courses',
           tabBarIcon: ({ focused }) => (
             <Text style={{ fontSize: focused ? 24 : 20 }}>🛒</Text>

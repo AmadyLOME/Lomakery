@@ -15,6 +15,7 @@ import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 export default function WeekMenuScreen() {
   const { profile } = useAuth();
@@ -212,7 +213,7 @@ export default function WeekMenuScreen() {
               <Text style={styles.backBtnText}>← Retour</Text>
             </TouchableOpacity>
             <Text style={styles.pickerTitle}>Choisir un plat</Text>
-            <View style={{ width: 80 }} />
+            <View style={{ width: scale(80) }} />
           </View>
 
           <ScrollView>
@@ -353,7 +354,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     gap: SPACING.sm,
   },
-  allReadyEmoji: { fontSize: 48 },
+  allReadyEmoji: { fontSize: moderateScale(48) },
   allReadyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.green },
   allReadySubtitle: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center' },
 
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  backBtn: { width: 80 },
+  backBtn: { width: scale(80) },
   backBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.md },
   pickerTitle: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
   pickerRow: {
@@ -392,5 +393,5 @@ const styles = StyleSheet.create({
   },
   pickerRecipeName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
   pickerRecipeDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
-  pickerAddIcon: { fontSize: 22, color: COLORS.primary, fontWeight: '700' },
+  pickerAddIcon: { fontSize: moderateScale(22), color: COLORS.primary, fontWeight: '700' },
 });
