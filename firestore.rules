@@ -117,6 +117,29 @@ service cloud.firestore {
         allow read: if isMember(householdId);
         allow write: if isMember(householdId) && request.auth.uid == userId;
       }
+
+      // Mots de la famille : chacun écrit et supprime les siens,
+      // tout le foyer peut épingler / désépingler
+      match /notes/{noteId} {
+        allow read: if isMember(householdId);
+        allow create: if isMember(householdId)
+                      && request.resource.data.authorUid == request.auth.uid;
+        allow update: if isMember(householdId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned']);
+        allow delete: if isMember(householdId)
+                      && resource.data.authorUid == request.auth.uid;
+      }
+
+      // Indicateur « … écrit un mot » : chacun ne met à jour que le sien
+      match /typing/{userId} {
+        allow read: if isMember(householdId);
+        allow write: if isMember(householdId) && request.auth.uid == userId;
+      }
+
+      // Infos utiles (Wi-Fi, médecin…) : modifiables par tout le foyer
+      match /infos/{infoId} {
+        allow read, write: if isMember(householdId);
+      }
     }
   }
 }

@@ -18,6 +18,33 @@ interface HelpItem {
 
 const SECTIONS: Section[] = [
   {
+    id: 'accueil',
+    emoji: '🏠',
+    title: 'L\'Accueil',
+    content: [
+      {
+        question: 'À quoi sert l\'Accueil ?',
+        answer: 'C\'est le premier onglet, ouvert au lancement. La carte « Aujourd\'hui » montre les repas du midi et du soir : cochez le rond quand un plat est cuisiné ou quand des restes sont mangés. Les tuiles donnent le nombre d\'articles à acheter (et les stocks bas) et les plats prévus cette semaine ; touchez-les pour ouvrir Courses ou Menu.',
+      },
+      {
+        question: 'Où est mon profil ?',
+        answer: 'Touchez votre avatar (avec la petite roue ⚙︎) en haut à droite de l\'Accueil : vous y trouvez votre photo, le foyer et son code d\'invitation, l\'aide et la déconnexion.',
+      },
+      {
+        question: 'Mots de la famille',
+        answer: 'Un mur de petits mots partagé par le foyer : rappels, infos, messages. Touchez « Écrire un mot », puis la flèche pour l\'envoyer ; les autres membres reçoivent une notification et voient « … écrit un mot » pendant que vous écrivez. Touchez un mot pour l\'épingler en haut, le copier ou le supprimer (seul son auteur peut le supprimer).',
+      },
+      {
+        question: 'Infos utiles',
+        answer: 'Des fiches pour ce que tout le foyer doit avoir sous la main : Wi-Fi, médecin, code du portail, jours de poubelles… Touchez + (ou un modèle) pour en créer une. Un champ « Masquer » s\'affiche en •••• : l\'œil le révèle, le bouton copier le copie, et un champ « Téléphone » peut être appelé directement. Touchez le titre d\'une fiche pour la modifier ou la supprimer.',
+      },
+      {
+        question: 'Mes infos sont-elles protégées ?',
+        answer: 'Les mots et les fiches ne sont visibles que par les membres de votre foyer. Évitez tout de même d\'y noter des codes bancaires ou des mots de passe importants.',
+      },
+    ],
+  },
+  {
     id: 'liste',
     emoji: '🛒',
     title: 'La Liste de courses',
@@ -50,8 +77,12 @@ const SECTIONS: Section[] = [
     title: 'Paramétrer le garde-manger',
     content: [
       {
+        question: 'Ouvrir le paramétrage',
+        answer: 'Dans l\'onglet Courses, touchez le bouton rond de réglages en haut à droite. La coche ✓ au même endroit referme le paramétrage.',
+      },
+      {
         question: 'Créer un groupe',
-        answer: 'Appuyez sur le bouton + en bas à droite pour créer un groupe (ex : Boucherie, Poissonnerie). Les groupes permettent d\'organiser vos articles par rayon.',
+        answer: 'Dans le paramétrage, appuyez sur le bouton orange + en bas à droite pour créer un groupe (ex : Boucherie, Poissonnerie). Les groupes permettent d\'organiser vos articles par rayon. Appui long sur un groupe pour le renommer.',
       },
       {
         question: 'Ajouter un article',
@@ -78,7 +109,15 @@ const SECTIONS: Section[] = [
     content: [
       {
         question: 'Créer une recette',
-        answer: 'Dans l\'onglet Recettes, appuyez sur "+ Nouvelle". Donnez-lui un nom et une description optionnelle, puis validez.',
+        answer: 'Dans l\'onglet Recettes, appuyez sur le bouton orange + en haut à droite. Donnez-lui un nom et une description optionnelle, puis validez.',
+      },
+      {
+        question: 'Liste ou carrousel',
+        answer: 'Sous le titre, le sélecteur « Liste / Carrousel » change l\'affichage des recettes. Le choix est mémorisé sur votre téléphone.',
+      },
+      {
+        question: 'Ajouter une photo',
+        answer: 'Ouvrez une recette et touchez la zone photo en haut : prenez une photo ou choisissez-en une dans la galerie. Elle apparaît dans la liste et le carrousel.',
       },
       {
         question: 'Ajouter des ingrédients',
@@ -90,11 +129,11 @@ const SECTIONS: Section[] = [
       },
       {
         question: 'Article non trouvé dans la liste ?',
-        answer: 'Si l\'article n\'existe pas encore, appuyez sur "⚙️ Aller au Paramétrage" pour l\'ajouter. Revenez ensuite sur la recette — il apparaîtra dans la liste.',
+        answer: 'Si l\'article n\'existe pas encore, appuyez sur « Ajouter un article dans Paramétrage » pour l\'ajouter. Revenez ensuite sur la recette — il apparaîtra dans la liste.',
       },
       {
         question: 'Supprimer un ingrédient ou une recette',
-        answer: 'Pour un ingrédient : appuyez sur le ✕ à droite dans le détail. Pour une recette : appuyez sur l\'icône 🗑 dans la liste des recettes.',
+        answer: 'Pour un ingrédient : appuyez sur le ✕ à droite dans le détail. Pour une recette : appuyez sur la poubelle sur sa carte (liste ou carrousel).',
       },
     ],
   },
@@ -140,11 +179,15 @@ const SECTIONS: Section[] = [
     content: [
       {
         question: 'Inviter votre partenaire',
-        answer: 'Allez dans Profil → votre foyer affiche un code d\'invitation. Partagez-le avec le bouton Partager (ou copiez-le). Votre partenaire crée un compte, choisit "Rejoindre" et entre le code.',
+        answer: 'Touchez votre avatar en haut de l\'Accueil : la carte « Mon foyer » affiche le code d\'invitation. Partagez-le ou copiez-le avec les boutons ronds. Votre partenaire crée un compte, choisit « Rejoindre » et entre le code.',
       },
       {
         question: 'Synchronisation en temps réel',
-        answer: 'Toutes les modifications sont synchronisées instantanément entre les deux téléphones. Si votre femme coche un article, vous le voyez disparaître en temps réel.',
+        answer: 'Toutes les modifications sont synchronisées instantanément entre les téléphones du foyer. Si quelqu\'un coche un article, vous le voyez changer en temps réel.',
+      },
+      {
+        question: 'Notifications',
+        answer: 'Les autres membres reçoivent une notification quand un article passe « À acheter », quand un stock est bas, quand le menu change ou quand un mot est écrit. Autorisez les notifications d\'Expo Go dans les Réglages de l\'iPhone si vous ne les recevez pas.',
       },
     ],
   },
@@ -155,7 +198,11 @@ const SECTIONS: Section[] = [
     content: [
       {
         question: 'Se déconnecter',
-        answer: 'Profil → bouton "Se déconnecter" en bas de page. Vos données restent sauvegardées dans le cloud.',
+        answer: 'Touchez votre avatar en haut de l\'Accueil, puis « Se déconnecter » en bas du profil. Vos données restent sauvegardées dans le cloud.',
+      },
+      {
+        question: 'Changer ma photo de profil',
+        answer: 'Dans le profil, touchez votre avatar (pastille appareil photo) : prenez une photo ou choisissez-en une. Les autres membres la voient dans l\'app.',
       },
       {
         question: 'Mes données sont-elles sauvegardées ?',
@@ -166,7 +213,7 @@ const SECTIONS: Section[] = [
 ];
 
 export default function HelpScreen() {
-  const [openSections, setOpenSections] = useState<string[]>(['liste']);
+  const [openSections, setOpenSections] = useState<string[]>(['accueil']);
   const [openItems, setOpenItems] = useState<string[]>([]);
 
   function toggleSection(id: string) {

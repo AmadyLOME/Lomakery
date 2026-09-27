@@ -84,7 +84,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <ScreenHeader title="Profil" />
+      <ScreenHeader title="Profil" onBack={navigation.canGoBack() ? () => navigation.goBack() : undefined} />
       <ScrollView contentContainerStyle={styles.content}>
         {/* Moi */}
         <View style={[styles.card, styles.meCard]}>

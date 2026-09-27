@@ -8,6 +8,7 @@ import Segmented from '../components/Segmented';
 import MenuEntrySheet from '../components/MenuEntrySheet';
 import SavedMenusSheet from '../components/SavedMenusSheet';
 import ReportMealSheet, { slotLabel } from '../components/ReportMealSheet';
+import { cookStatus } from '../utils/menuDisplay';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
@@ -202,20 +203,7 @@ export default function WeekMenuScreen() {
 
   // ─── Rendu ─────────────────────────────────────────────────────────────────
 
-  const cookStatus = (entry: MenuEntry) => {
-    const first = parseSlot(activeSlots(entry)[0] ?? sortSlots(entry.slots)[0]);
-    const veille = entry.cookDay === first.day - 1 && entry.cookMeal === 'soir';
-    if (entry.cooked) {
-      const d = entry.cookedAt ? new Date(entry.cookedAt) : dateOf(weekId, entry.cookDay);
-      const label = `${DAY_SHORT[(d.getDay() + 6) % 7].toLowerCase()}. ${d.getDate()}`;
-      return { done: true, text: `Cuisiné ${label}${veille ? ' · la veille' : ''}` };
-    }
-    const when =
-      today !== null && entry.cookDay === today
-        ? entry.cookMeal === 'midi' ? 'ce midi' : 'ce soir'
-        : `${formatDayShort(weekId, entry.cookDay)} ${entry.cookMeal}`;
-    return { done: false, text: `À cuisiner ${when}${veille ? ' · la veille' : ''}` };
-  };
+  const statusOf = (entry: MenuEntry) => cookStatus(entry, weekId, today);
 
   const renderTile = (entry: MenuEntry, slot: SlotKey) => {
     const recipe = recipeOf(entry.recipeId);
@@ -251,7 +239,7 @@ export default function WeekMenuScreen() {
       );
     }
 
-    const status = isFirst ? cookStatus(entry) : null;
+    const status = isFirst ? statusOf(entry) : null;
     const suffix = `${eaten ? ' · mangé' : ''}${reportedHere ? ' · reporté' : ''}`;
 
     return (

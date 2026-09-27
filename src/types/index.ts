@@ -118,3 +118,33 @@ export interface SavedMenu {
   createdBy: string;
   createdAt: number;
 }
+
+// ─── Accueil ─────────────────────────────────────────────────────────────────
+
+// households/{id}/notes/{noteId} — un petit mot sur le mur de la famille
+export interface FamilyNote {
+  id: string;
+  text: string;
+  authorUid: string;
+  authorName: string;
+  createdAt: number;
+  pinned: boolean;
+}
+
+export interface InfoField {
+  label: string;
+  value: string;
+  secret: boolean;            // masqué par défaut (codes)
+  kind: 'text' | 'phone';     // « phone » : bouton appeler
+}
+
+// households/{id}/infos/{infoId} — une fiche d'infos utiles (Wi-Fi, pédiatre…)
+export interface InfoCard {
+  id: string;
+  title: string;
+  color: number;              // index dans la palette des fiches
+  fields: InfoField[];
+  updatedBy: string;
+  updatedByName: string;
+  updatedAt: number;
+}

@@ -7,6 +7,7 @@ import { Text } from './Text';
 import { COLORS } from '../constants/theme';
 
 const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  Home: 'home',
   FamilyList: 'cart',
   Recipes: 'book',
   WeekMenu: 'calendar',

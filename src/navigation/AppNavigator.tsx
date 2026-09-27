@@ -13,16 +13,21 @@ import RecipesScreen from '../screens/RecipesScreen';
 import WeekMenuScreen from '../screens/WeekMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HelpScreen from '../screens/HelpScreen';
+import HomeScreen from '../screens/HomeScreen';
+import NotesScreen from '../screens/NotesScreen';
+import InfosScreen from '../screens/InfosScreen';
 import { COLORS, FONT_SIZE, FONTS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const ProfileStack = createNativeStackNavigator();
+const HomeStack = createNativeStackNavigator();
 
-function ProfileNavigator() {
+// L'Accueil et tout ce qui s'ouvre depuis lui : mots, infos, profil (via l'avatar), aide
+function HomeNavigator() {
   return (
-    <ProfileStack.Navigator
+    <HomeStack.Navigator
       screenOptions={{
+        headerShown: false,
         headerStyle: { backgroundColor: COLORS.background },
         headerTitleStyle: { fontFamily: FONTS.extrabold, color: COLORS.text, fontSize: FONT_SIZE.xl },
         headerShadowVisible: false,
@@ -30,9 +35,12 @@ function ProfileNavigator() {
         headerBackTitleStyle: { fontFamily: FONTS.semibold },
       }}
     >
-      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ headerShown: false, title: 'Profil' }} />
-      <ProfileStack.Screen name="Help" component={HelpScreen} options={{ title: 'Aide' }} />
-    </ProfileStack.Navigator>
+      <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ title: 'Accueil' }} />
+      <HomeStack.Screen name="Notes" component={NotesScreen} />
+      <HomeStack.Screen name="Infos" component={InfosScreen} />
+      <HomeStack.Screen name="Profile" component={ProfileScreen} />
+      <HomeStack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: 'Aide' }} />
+    </HomeStack.Navigator>
   );
 }
 
@@ -42,10 +50,10 @@ function MainTabs() {
       tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: COLORS.background } }}
     >
+      <Tab.Screen name="Home" component={HomeNavigator} options={{ tabBarLabel: 'Accueil' }} />
       <Tab.Screen name="FamilyList" component={FamilyListScreen} options={{ tabBarLabel: 'Courses' }} />
       <Tab.Screen name="Recipes" component={RecipesScreen} options={{ tabBarLabel: 'Recettes' }} />
       <Tab.Screen name="WeekMenu" component={WeekMenuScreen} options={{ tabBarLabel: 'Menu' }} />
-      <Tab.Screen name="Profile" component={ProfileNavigator} options={{ tabBarLabel: 'Profil' }} />
     </Tab.Navigator>
   );
 }
