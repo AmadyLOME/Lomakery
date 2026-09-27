@@ -18,13 +18,32 @@ interface HelpItem {
 
 const SECTIONS: Section[] = [
   {
+    id: 'nouveautes',
+    emoji: '✨',
+    title: 'Quoi de neuf ?',
+    content: [
+      {
+        question: 'Un nouvel Accueil',
+        answer: 'L\'app s\'ouvre maintenant sur l\'Accueil : guirlande de photos de famille, repas du jour, courses et menu en un coup d\'œil, mots de la famille et infos utiles. Le Profil se trouve derrière votre avatar, en haut à droite.',
+      },
+      {
+        question: 'Un vrai planning pour le menu',
+        answer: 'Le menu se planifie jour par jour (midi et soir), avec la date de cuisson, les restes, les repas mangés, sautés ou reportés, et des menus enregistrés à réutiliser.',
+      },
+      {
+        question: 'Une interface plus douce',
+        answer: 'Formes arrondies, nouvelle police, barre d\'onglets flottante, photos pour les recettes et les profils, et notifications quand la famille modifie quelque chose.',
+      },
+    ],
+  },
+  {
     id: 'accueil',
     emoji: '🏠',
     title: 'L\'Accueil',
     content: [
       {
         question: 'À quoi sert l\'Accueil ?',
-        answer: 'C\'est le premier onglet, ouvert au lancement. La carte « Aujourd\'hui » montre les repas du midi et du soir : cochez le rond quand un plat est cuisiné ou quand des restes sont mangés. Les tuiles donnent le nombre d\'articles à acheter (et les stocks bas) et les plats prévus cette semaine ; touchez-les pour ouvrir Courses ou Menu.',
+        answer: 'C\'est le premier onglet, ouvert au lancement. De haut en bas : la guirlande de photos de famille, la carte « Aujourd\'hui » avec les repas du midi et du soir (cochez le rond quand un plat est cuisiné ou quand des restes sont mangés), les tuiles Courses et Menu (nombre d\'articles à acheter, stocks bas, plats prévus — touchez-les pour ouvrir l\'onglet), puis les mots de la famille et les infos utiles (« Tout voir » pour les ouvrir en grand).',
       },
       {
         question: 'Où est mon profil ?',
@@ -56,6 +75,10 @@ const SECTIONS: Section[] = [
       {
         question: 'À acheter vs À la casa',
         answer: 'La vue "À acheter" regroupe tout ce qu\'il faut aller chercher. La vue "À la casa" liste ce que vous avez déjà à la maison. Appuyez sur la checkbox d\'un article pour le déplacer d\'une liste à l\'autre.',
+      },
+      {
+        question: 'Rechercher un article',
+        answer: 'La barre « Rechercher un article… » sous le sélecteur filtre la vue affichée (À acheter ou À la casa) au fur et à mesure que vous tapez.',
       },
       {
         question: 'Comment cocher un article ?',
@@ -184,6 +207,10 @@ const SECTIONS: Section[] = [
       {
         question: 'Inviter votre partenaire',
         answer: 'Touchez votre avatar en haut de l\'Accueil : la carte « Mon foyer » affiche le code d\'invitation. Partagez-le ou copiez-le avec les boutons ronds. Votre partenaire crée un compte, choisit « Rejoindre » et entre le code.',
+      },
+      {
+        question: 'Un compte, un foyer',
+        answer: 'Chaque compte appartient à un seul foyer. Pour un ami qui veut son propre foyer : il crée un compte dans l\'app et choisit « Créer un foyer ». Ses listes, recettes et menus restent séparés des vôtres.',
       },
       {
         question: 'Synchronisation en temps réel',
