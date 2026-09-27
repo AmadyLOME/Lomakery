@@ -11,17 +11,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients } from '../services/recipes';
+import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients, setRecipePhoto } from '../services/recipes';
+import { pickPhoto, askPhotoSource, RECIPE_PHOTO_OPTIONS, PhotoSource } from '../services/photos';
+import { useRecipePhoto } from '../hooks/useRecipePhoto';
+import RecipeCarousel from '../components/RecipeCarousel';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, RecipeIngredient, ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
 type IngredientStatus = 'available' | 'missing' | 'unknown';
+type ViewMode = 'list' | 'carousel';
+
+const VIEW_MODE_KEY = 'recipes:viewMode';
 
 function getIngredientStatus(name: string, familyItems: ShoppingItem[]): IngredientStatus {
   const match = familyItems.find(
@@ -29,6 +38,23 @@ function getIngredientStatus(name: string, familyItems: ShoppingItem[]): Ingredi
   );
   if (!match) return 'missing';
   return match.checked ? 'available' : 'unknown';
+}
+
+function getRecipeStats(recipe: Recipe, familyItems: ShoppingItem[]) {
+  const ings = recipe.ingredients ?? [];
+  const statuses = ings.map((ing) => getIngredientStatus(ing.name, familyItems));
+  return {
+    total: ings.length,
+    available: statuses.filter((st) => st === 'available').length,
+    missing: statuses.filter((st) => st === 'missing').length,
+  };
+}
+
+// Miniature de la photo dans la vue liste
+function RecipeThumb({ householdId, recipe }: { householdId: string; recipe: Recipe }) {
+  const uri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
+  if (!uri) return null;
+  return <Image source={{ uri }} style={styles.thumb} />;
 }
 
 // ─── Vue picker ingrédient (inline, pas de Modal) ────────────────────────────
@@ -188,6 +214,32 @@ interface RecipeDetailModalProps {
 function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, userId, onClose }: RecipeDetailModalProps) {
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>(recipe.ingredients || []);
   const [showPicker, setShowPicker] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const photoUri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
+
+  const changePhoto = () => {
+    const upload = async (source: PhotoSource) => {
+      try {
+        const base64 = await pickPhoto(source, RECIPE_PHOTO_OPTIONS);
+        if (!base64) return;
+        setPhotoBusy(true);
+        await setRecipePhoto(householdId, recipe.id, base64);
+      } catch (e: any) {
+        Alert.alert('Erreur', "La photo n'a pas pu être enregistrée.\n" + (e?.message ?? ''));
+      } finally {
+        setPhotoBusy(false);
+      }
+    };
+    const remove = async () => {
+      setPhotoBusy(true);
+      try {
+        await setRecipePhoto(householdId, recipe.id, null);
+      } finally {
+        setPhotoBusy(false);
+      }
+    };
+    askPhotoSource('Photo de la recette', upload, recipe.photoUpdatedAt ? remove : undefined);
+  };
 
   // Sync quand la recette change (temps réel)
   useEffect(() => {
@@ -263,6 +315,24 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
               <View style={{ width: scale(80) }} />
             </View>
 
+            <TouchableOpacity style={styles.detailPhotoBox} onPress={changePhoto} activeOpacity={0.85}>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.detailPhoto} />
+              ) : (
+                <Text style={styles.detailPhotoAdd}>📷 Ajouter une photo</Text>
+              )}
+              {photoUri && !photoBusy && (
+                <View style={styles.detailPhotoEdit}>
+                  <Text style={styles.detailPhotoEditText}>✏️ Photo</Text>
+                </View>
+              )}
+              {photoBusy && (
+                <View style={styles.detailPhotoBusy}>
+                  <ActivityIndicator color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+
             {recipe.description ? (
               <Text style={styles.recipeDescription}>{recipe.description}</Text>
             ) : null}
@@ -331,6 +401,19 @@ export default function RecipesScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
+
+  useEffect(() => {
+    AsyncStorage.getItem(VIEW_MODE_KEY)
+      .then((v) => { if (v === 'list' || v === 'carousel') setViewMode(v); })
+      .catch(() => {});
+  }, []);
+
+  const toggleViewMode = () => {
+    const next: ViewMode = viewMode === 'list' ? 'carousel' : 'list';
+    setViewMode(next);
+    AsyncStorage.setItem(VIEW_MODE_KEY, next).catch(() => {});
+  };
 
   useEffect(() => {
     if (!householdId) return;
@@ -370,9 +453,16 @@ export default function RecipesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mes Recettes</Text>
-        <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateModal(true)}>
-          <Text style={styles.createBtnText}>+ Nouvelle</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {recipes.length > 0 && (
+            <TouchableOpacity style={styles.viewToggle} onPress={toggleViewMode}>
+              <Text style={styles.viewToggleText}>{viewMode === 'list' ? '🎠 Carrousel' : '☰ Liste'}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateModal(true)}>
+            <Text style={styles.createBtnText}>+ Nouvelle</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {recipes.length === 0 ? (
@@ -381,22 +471,25 @@ export default function RecipesScreen() {
           <Text style={styles.emptyTitle}>Aucune recette</Text>
           <Text style={styles.emptySubtitle}>Crée ta première recette pour commencer</Text>
         </View>
+      ) : viewMode === 'carousel' ? (
+        <RecipeCarousel
+          recipes={recipes}
+          householdId={householdId}
+          getStats={(r) => getRecipeStats(r, familyItems)}
+          onOpen={setSelectedRecipe}
+          onDelete={handleDelete}
+        />
       ) : (
         <FlatList
           data={recipes}
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ padding: SPACING.md }}
           renderItem={({ item }) => {
-            const total = item.ingredients?.length ?? 0;
-            const available = (item.ingredients ?? []).filter(
-              (ing) => getIngredientStatus(ing.name, familyItems) === 'available'
-            ).length;
-            const missing = (item.ingredients ?? []).filter(
-              (ing) => getIngredientStatus(ing.name, familyItems) === 'missing'
-            ).length;
+            const { total, available, missing } = getRecipeStats(item, familyItems);
 
             return (
               <TouchableOpacity style={styles.recipeCard} onPress={() => setSelectedRecipe(item)}>
+                <RecipeThumb householdId={householdId} recipe={item} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.recipeName}>{item.name}</Text>
                   {item.description ? (
@@ -499,6 +592,15 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  viewToggle: {
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: SPACING.xs,
+  },
+  viewToggleText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.sm },
   createBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
@@ -524,6 +626,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+  },
+  thumb: {
+    width: scale(52),
+    height: scale(52),
+    borderRadius: BORDER_RADIUS.sm,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.surfaceWarm,
   },
   recipeName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
   recipeDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
@@ -563,6 +672,33 @@ const styles = StyleSheet.create({
   backBtn: { width: scale(80) },
   backBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.md },
   modalTitle: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
+
+  detailPhotoBox: {
+    height: scale(200),
+    backgroundColor: COLORS.surfaceWarm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  detailPhoto: { width: '100%', height: '100%' },
+  detailPhotoAdd: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.primary },
+  detailPhotoEdit: {
+    position: 'absolute',
+    bottom: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  detailPhotoEditText: { color: '#fff', fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  detailPhotoBusy: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   recipeDescription: {
     fontSize: FONT_SIZE.md,

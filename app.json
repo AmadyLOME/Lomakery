@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TeninGrocery accède à vos photos pour illustrer les recettes et votre profil.",
+          "cameraPermission": "TeninGrocery utilise l'appareil photo pour photographier vos recettes et votre profil."
+        }
+      ]
     ],
     "extra": {
       "eas": {

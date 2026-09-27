@@ -70,4 +70,12 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   createdBy: string;
   createdAt: Date;
+  // Présent si la recette a une photo (dans recipePhotos/{id}) ; sert aussi de clé de cache
+  photoUpdatedAt?: number;
+}
+
+export interface MemberProfile {
+  uid: string;
+  displayName: string;
+  photo?: string; // JPEG base64
 }

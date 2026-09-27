@@ -95,6 +95,18 @@ service cloud.firestore {
         allow read: if isMember(householdId);
         allow write: if isMember(householdId) && request.auth.uid == userId;
       }
+
+      // Photos des recettes (JPEG base64)
+      match /recipePhotos/{recipeId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Profils publics des membres (nom + photo) : lisibles par le foyer,
+      // chacun ne modifie que le sien
+      match /members/{userId} {
+        allow read: if isMember(householdId);
+        allow write: if isMember(householdId) && request.auth.uid == userId;
+      }
     }
   }
 }

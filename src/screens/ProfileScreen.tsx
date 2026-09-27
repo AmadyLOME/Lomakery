@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Share, Alert,
+  View, Text, StyleSheet, TouchableOpacity, Share, Alert, ScrollView, ActivityIndicator,
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/auth';
 import { getHousehold } from '../services/household';
-import { Household } from '../types';
+import { subscribeToMembers, setMemberPhoto } from '../services/members';
+import { pickPhoto, askPhotoSource, AVATAR_OPTIONS, PhotoSource } from '../services/photos';
+import Avatar from '../components/Avatar';
+import { Household, MemberProfile } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
@@ -15,12 +18,46 @@ export default function ProfileScreen() {
   const { user, profile } = useAuth();
   const navigation = useNavigation<any>();
   const [household, setHousehold] = useState<Household | null>(null);
+  const [members, setMembers] = useState<MemberProfile[]>([]);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const householdId: string | undefined = profile?.householdId;
 
   useEffect(() => {
-    if (profile?.householdId) {
-      getHousehold(profile.householdId).then(setHousehold);
-    }
-  }, [profile?.householdId]);
+    if (!householdId) return;
+    getHousehold(householdId).then(setHousehold);
+    return subscribeToMembers(householdId, setMembers);
+  }, [householdId]);
+
+  const me = members.find((m) => m.uid === user?.uid);
+  // Membres du foyer, moi en premier ; ceux qui n'ont pas encore ouvert la nouvelle version n'ont pas de profil
+  const otherMembers = (household?.members ?? [])
+    .filter((uid) => uid !== user?.uid)
+    .map((uid) => members.find((m) => m.uid === uid) ?? { uid, displayName: 'Membre' });
+
+  function changePhoto() {
+    if (!householdId || !user) return;
+    const upload = async (source: PhotoSource) => {
+      try {
+        const base64 = await pickPhoto(source, AVATAR_OPTIONS);
+        if (!base64) return;
+        setPhotoBusy(true);
+        await setMemberPhoto(householdId, user.uid, base64);
+      } catch (e: any) {
+        Alert.alert('Erreur', "La photo n'a pas pu être enregistrée.\n" + (e?.message ?? ''));
+      } finally {
+        setPhotoBusy(false);
+      }
+    };
+    const remove = async () => {
+      setPhotoBusy(true);
+      try {
+        await setMemberPhoto(householdId, user.uid, null);
+      } finally {
+        setPhotoBusy(false);
+      }
+    };
+    askPhotoSource('Photo de profil', upload, me?.photo ? remove : undefined);
+  }
 
   async function shareInviteCode() {
     if (!household) return;
@@ -36,13 +73,14 @@ export default function ProfileScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.card}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(user?.displayName ?? '?')[0].toUpperCase()}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={changePhoto} style={styles.avatarWrap} activeOpacity={0.8}>
+          <Avatar name={user?.displayName ?? undefined} photo={me?.photo} size={scale(88)} />
+          <View style={styles.avatarBadge}>
+            {photoBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.avatarBadgeText}>📷</Text>}
+          </View>
+        </TouchableOpacity>
         <Text style={styles.name}>{user?.displayName}</Text>
         <Text style={styles.email}>{user?.email}</Text>
       </View>
@@ -54,6 +92,17 @@ export default function ProfileScreen() {
           <Text style={styles.memberCount}>
             {household.members.length} membre{household.members.length > 1 ? 's' : ''}
           </Text>
+
+          {otherMembers.length > 0 && (
+            <View style={styles.membersList}>
+              {otherMembers.map((m) => (
+                <View key={m.uid} style={styles.memberRow}>
+                  <Avatar name={m.displayName} photo={m.photo} size={scale(40)} />
+                  <Text style={styles.memberName}>{m.displayName}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           <TouchableOpacity style={styles.inviteRow} onPress={shareInviteCode} onLongPress={copyInviteCode}>
             <View>
@@ -84,12 +133,13 @@ export default function ProfileScreen() {
       >
         <Text style={styles.logoutText}>Se déconnecter</Text>
       </TouchableOpacity>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background, padding: SPACING.md },
+  container: { flex: 1, backgroundColor: COLORS.background },
+  content: { padding: SPACING.md },
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.md,
@@ -102,18 +152,24 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  avatar: {
-    width: scale(80),
-    height: scale(80),
-    borderRadius: scale(40),
-    backgroundColor: COLORS.green,
+  avatarWrap: { marginBottom: SPACING.sm },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: scale(30),
+    height: scale(30),
+    borderRadius: scale(15),
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
-    borderWidth: 3,
-    borderColor: COLORS.mustard,
+    borderWidth: 2,
+    borderColor: COLORS.surface,
   },
-  avatarText: { color: '#fff', fontSize: moderateScale(32), fontWeight: '700' },
+  avatarBadgeText: { fontSize: moderateScale(14) },
+  membersList: { alignSelf: 'stretch', marginBottom: SPACING.md, gap: SPACING.sm },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
+  memberName: { fontSize: FONT_SIZE.lg, color: COLORS.text, fontWeight: '600' },
   name: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
   email: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 2 },
   sectionTitle: {

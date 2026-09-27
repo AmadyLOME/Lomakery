@@ -2,8 +2,11 @@ import {
   collection,
   doc,
   addDoc,
+  getDoc,
+  setDoc,
   updateDoc,
   deleteDoc,
+  deleteField,
   onSnapshot,
   serverTimestamp,
   Unsubscribe,
@@ -43,6 +46,28 @@ export async function addRecipe(
 
 export async function deleteRecipe(householdId: string, recipeId: string) {
   await deleteDoc(doc(db, 'households', householdId, 'recipes', recipeId));
+  await deleteDoc(recipePhotoDoc(householdId, recipeId));
+}
+
+// Photos : households/{householdId}/recipePhotos/{recipeId} → { data: JPEG base64 }.
+// Séparées des recettes pour ne pas les télécharger à chaque mise à jour de la liste.
+const recipePhotoDoc = (householdId: string, recipeId: string) =>
+  doc(db, 'households', householdId, 'recipePhotos', recipeId);
+
+export async function getRecipePhoto(householdId: string, recipeId: string): Promise<string | null> {
+  const snap = await getDoc(recipePhotoDoc(householdId, recipeId));
+  return snap.exists() ? (snap.data().data as string) : null;
+}
+
+export async function setRecipePhoto(householdId: string, recipeId: string, base64: string | null) {
+  const recipeRef = doc(db, 'households', householdId, 'recipes', recipeId);
+  if (base64) {
+    await setDoc(recipePhotoDoc(householdId, recipeId), { data: base64 });
+    await updateDoc(recipeRef, { photoUpdatedAt: Date.now() });
+  } else {
+    await updateDoc(recipeRef, { photoUpdatedAt: deleteField() });
+    await deleteDoc(recipePhotoDoc(householdId, recipeId));
+  }
 }
 
 export async function updateRecipeIngredients(

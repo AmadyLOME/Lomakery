@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 import { registerForPushNotifications } from '../services/notifications';
+import { ensureMemberProfile } from '../services/members';
 import LoginScreen from '../screens/LoginScreen';
 import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
 import FamilyListScreen from '../screens/FamilyListScreen';
@@ -110,6 +111,9 @@ export default function AppNavigator() {
     if (!user || !householdId) return;
     registerForPushNotifications(user.uid, householdId).catch((e) =>
       console.error('[notifications] register error:', e?.message ?? e)
+    );
+    ensureMemberProfile(householdId, user.uid, user.displayName ?? 'Membre').catch((e) =>
+      console.error('[members] ensureMemberProfile error:', e?.code ?? e)
     );
   }, [user?.uid, householdId]);
 
