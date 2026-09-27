@@ -84,8 +84,18 @@ service cloud.firestore {
         allow read, write: if isMember(householdId);
       }
 
-      // Menu de la semaine
+      // Ancien menu (liste sans jours) : lu une fois pour migration puis supprimé
       match /weekMenu/{docId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Menu planifié : un document par semaine (id = date du lundi)
+      match /weeks/{weekId} {
+        allow read, write: if isMember(householdId);
+      }
+
+      // Menus enregistrés, réutilisables
+      match /savedMenus/{menuId} {
         allow read, write: if isMember(householdId);
       }
 

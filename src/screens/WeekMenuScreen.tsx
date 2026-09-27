@@ -1,251 +1,424 @@
-import React, { useState, useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../components/Text';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
-import { subscribeToWeekMenu, addToWeekMenu, removeFromWeekMenu, resetWeekMenu } from '../services/weekMenu';
-import { subscribeToRecipes } from '../services/recipes';
-import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
-import { Recipe, ShoppingItem, ShoppingGroup } from '../types';
-import { notify, senderName } from '../services/notifications';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import ScreenHeader from '../components/ScreenHeader';
 import RoundButton from '../components/RoundButton';
-import { scale, moderateScale } from '../utils/responsive';
+import Segmented from '../components/Segmented';
+import MenuEntrySheet from '../components/MenuEntrySheet';
+import SavedMenusSheet from '../components/SavedMenusSheet';
+import { useAuth } from '../hooks/useAuth';
+import { subscribeToRecipes } from '../services/recipes';
+import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
+import {
+  subscribeToWeek,
+  upsertEntry,
+  removeEntry,
+  setCooked,
+  clearWeek,
+  cleanupOldWeeks,
+  migrateLegacyMenu,
+} from '../services/weekPlan';
+import { notify, senderName } from '../services/notifications';
+import { Meal, MenuEntry, Recipe, ShoppingItem, ShoppingGroup, SlotKey } from '../types';
+import {
+  DAY_SHORT,
+  addWeeks,
+  dateOf,
+  formatDayShort,
+  formatWeekRange,
+  parseSlot,
+  slotKey,
+  sortSlots,
+  todayDayIndex,
+  weekIdOf,
+} from '../utils/weeks';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
+
+type WeekOffset = '-1' | '0' | '1';
+const MEALS: Meal[] = ['midi', 'soir'];
+const WEEK_LABELS: Record<WeekOffset, string> = {
+  '-1': 'la semaine passée',
+  '0': 'cette semaine',
+  '1': 'la semaine prochaine',
+};
+
+// Une couleur douce par plat, pour repérer ses différents repas d'un coup d'œil
+const DISH_COLORS = [
+  { bg: '#F9E2D3', fg: '#7A4A2E', ring: '#E0A77F' },
+  { bg: '#E2EBE4', fg: '#3E6B4C', ring: '#8FB39A' },
+  { bg: '#F6ECCF', fg: '#7A5A0E', ring: '#C9A54A' },
+  { bg: '#E3E4F3', fg: '#3F4575', ring: '#9EA3D6' },
+  { bg: '#F3DDE6', fg: '#7A3553', ring: '#D49AB4' },
+];
+
+interface EditorState {
+  visible: boolean;
+  initial: MenuEntry | null;
+  presetSlot: SlotKey | null;
+}
 
 export default function WeekMenuScreen() {
-  const { profile } = useAuth();
-  const householdId = profile?.householdId ?? '';
+  const { user, profile } = useAuth();
+  const householdId: string = profile?.householdId ?? '';
 
-  const [menuIds, setMenuIds] = useState<string[]>([]);
+  const [offset, setOffset] = useState<WeekOffset>('0');
+  const currentWeek = weekIdOf(new Date());
+  const weekId = addWeeks(currentWeek, Number(offset));
+
+  const [entries, setEntries] = useState<MenuEntry[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [familyItems, setFamilyItems] = useState<ShoppingItem[]>([]);
   const [familyGroups, setFamilyGroups] = useState<ShoppingGroup[]>([]);
-  const [showPicker, setShowPicker] = useState(false);
-  const [collapsedRecipes, setCollapsedRecipes] = useState<Set<string>>(new Set());
-  const [collapsedMissingGroups, setCollapsedMissingGroups] = useState<Set<string>>(new Set());
+  const [editor, setEditor] = useState<EditorState>({ visible: false, initial: null, presetSlot: null });
+  const [showSaved, setShowSaved] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
+
+  const scrollRef = useRef<ScrollView>(null);
+  const dayY = useRef<number[]>([]);
+  const planningY = useRef(0);
+
+  // Ménage des vieilles semaines + reprise de l'ancien menu, une fois par ouverture
+  useEffect(() => {
+    if (!householdId) return;
+    cleanupOldWeeks(householdId).catch((e) => console.error('[weeks] cleanup error:', e?.code ?? e));
+    migrateLegacyMenu(householdId).catch((e) => console.error('[weeks] migration error:', e?.code ?? e));
+  }, [householdId]);
 
   useEffect(() => {
     if (!householdId) return;
-    const u1 = subscribeToWeekMenu(householdId, setMenuIds);
-    const u2 = subscribeToRecipes(householdId, setRecipes);
-    const u3 = subscribeToFamilyList(householdId, setFamilyItems);
-    const u4 = subscribeToFamilyGroups(householdId, setFamilyGroups);
-    return () => { u1(); u2(); u3(); u4(); };
+    const u1 = subscribeToRecipes(householdId, setRecipes);
+    const u2 = subscribeToFamilyList(householdId, setFamilyItems);
+    const u3 = subscribeToFamilyGroups(householdId, setFamilyGroups);
+    return () => { u1(); u2(); u3(); };
   }, [householdId]);
 
-  function toggleRecipe(id: string) {
-    setCollapsedRecipes((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  useEffect(() => {
+    if (!householdId) return;
+    setEntries([]);
+    return subscribeToWeek(householdId, weekId, setEntries);
+  }, [householdId, weekId]);
 
-  function toggleMissingGroup(id: string) {
-    setCollapsedMissingGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  const recipeOf = (id: string) => recipes.find((r) => r.id === id);
+  const colorOf = (entry: MenuEntry) => DISH_COLORS[Math.max(0, entries.indexOf(entry)) % DISH_COLORS.length];
 
-  const menuRecipes = recipes.filter((r) => menuIds.includes(r.id));
-  const availableRecipes = recipes.filter((r) => !menuIds.includes(r.id));
+  const placed = entries.filter((e) => e.slots.length > 0);
+  const unplaced = entries.filter((e) => e.slots.length === 0);
+  const today = todayDayIndex(weekId);
+  const weekIsPast = weekId < currentWeek;
 
-  // Articles "À acheter" dans familyList dont le nom figure dans les ingrédients des recettes sélectionnées
-  const allIngredientNames = new Set(
-    menuRecipes.flatMap((r) => (r.ingredients ?? []).map((i) => i.name.toLowerCase().trim()))
-  );
+  // Articles « À acheter » dont le nom figure dans les ingrédients des plats de la semaine
+  const missingItems = useMemo(() => {
+    const names = new Set(
+      entries.flatMap((e) => (recipeOf(e.recipeId)?.ingredients ?? []).map((i) => i.name.toLowerCase().trim()))
+    );
+    return familyItems.filter((item) => !item.checked && names.has(item.name.toLowerCase().trim()));
+  }, [entries, recipes, familyItems]);
 
-  const missingItems = familyItems.filter(
-    (item) => !item.checked && allIngredientNames.has(item.name.toLowerCase().trim())
-  );
+  // Jours où il reste un plat à cuisiner
+  const cookDays = new Set(placed.filter((e) => !e.cooked).map((e) => e.cookDay));
 
-  const allReady = menuIds.length > 0 && missingItems.length === 0;
+  // ─── Actions ───────────────────────────────────────────────────────────────
 
-  const handleReset = () => {
-    Alert.alert(
-      'Refaire le menu',
-      'Vider toutes les recettes de la semaine ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Vider',
-          style: 'destructive',
-          onPress: () => {
-            resetWeekMenu(householdId);
-            notify(householdId, '📅 Menu de la semaine', `${senderName()} a vidé le menu de la semaine`);
-          },
-        },
-      ]
+  const openAdd = (presetSlot: SlotKey | null = null) => setEditor({ visible: true, initial: null, presetSlot });
+  const openEdit = (entry: MenuEntry) => setEditor({ visible: true, initial: entry, presetSlot: null });
+  const closeEditor = () => setEditor((s) => ({ ...s, visible: false }));
+
+  const handleSubmit = async (entry: MenuEntry) => {
+    const isNew = !editor.initial;
+    closeEditor();
+    try {
+      await upsertEntry(householdId, weekId, entry);
+      const name = recipeOf(entry.recipeId)?.name;
+      if (isNew && name) {
+        notify(householdId, '📅 Menu de la semaine', `${senderName()} a ajouté « ${name} » au menu`);
+      }
+    } catch (e: any) {
+      Alert.alert('Erreur', "Le menu n'a pas pu être enregistré.\n" + (e?.message ?? ''));
+    }
+  };
+
+  const toggleCooked = (entry: MenuEntry) => setCooked(householdId, weekId, entry.id, !entry.cooked);
+
+  const openEntryActions = (entry: MenuEntry) => {
+    const name = recipeOf(entry.recipeId)?.name ?? 'Plat';
+    Alert.alert(name, undefined, [
+      { text: entry.cooked ? 'Pas encore cuisiné' : 'Marquer comme cuisiné', onPress: () => toggleCooked(entry) },
+      { text: 'Modifier', onPress: () => openEdit(entry) },
+      { text: 'Retirer du menu', style: 'destructive', onPress: () => removeEntry(householdId, weekId, entry.id) },
+      { text: 'Annuler', style: 'cancel' },
+    ]);
+  };
+
+  const confirmClear = () =>
+    Alert.alert('Vider la semaine', `Retirer tous les plats du ${formatWeekRange(weekId)} ?`, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Vider', style: 'destructive', onPress: () => clearWeek(householdId, weekId) },
+    ]);
+
+  const scrollToDay = (day: number) => {
+    const y = dayY.current[day];
+    if (y !== undefined) scrollRef.current?.scrollTo({ y: planningY.current + y - 8, animated: true });
+  };
+
+  // ─── Rendu ─────────────────────────────────────────────────────────────────
+
+  const cookStatus = (entry: MenuEntry) => {
+    const first = parseSlot(sortSlots(entry.slots)[0]);
+    const veille = entry.cookDay === first.day - 1 && entry.cookMeal === 'soir';
+    if (entry.cooked) {
+      const d = entry.cookedAt ? new Date(entry.cookedAt) : dateOf(weekId, entry.cookDay);
+      const label = `${DAY_SHORT[(d.getDay() + 6) % 7].toLowerCase()}. ${d.getDate()}`;
+      return { done: true, text: `Cuisiné ${label}${veille ? ' · la veille' : ''}` };
+    }
+    const when =
+      today !== null && entry.cookDay === today
+        ? entry.cookMeal === 'midi' ? 'ce midi' : 'ce soir'
+        : `${formatDayShort(weekId, entry.cookDay)} ${entry.cookMeal}`;
+    return { done: false, text: `À cuisiner ${when}${veille ? ' · la veille' : ''}` };
+  };
+
+  const renderTile = (entry: MenuEntry, slot: SlotKey) => {
+    const recipe = recipeOf(entry.recipeId);
+    const color = colorOf(entry);
+    const ordered = sortSlots(entry.slots);
+    const index = ordered.indexOf(slot);
+    const isFirst = index === 0;
+    const status = isFirst ? cookStatus(entry) : null;
+
+    return (
+      <TouchableOpacity
+        key={`${entry.id}-${slot}`}
+        style={[styles.tile, { backgroundColor: color.bg }]}
+        onPress={() => openEntryActions(entry)}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.tileName} numberOfLines={1}>
+            {recipe?.name ?? 'Recette supprimée'}
+            {isFirst && ordered.length > 1 ? (
+              <Text style={[styles.tileCount, { color: color.fg }]}> · {ordered.length} repas</Text>
+            ) : null}
+          </Text>
+          {status ? (
+            <View style={styles.tileStatusRow}>
+              <Ionicons
+                name={status.done ? 'checkmark' : 'flame-outline'}
+                size={13}
+                color={status.done ? COLORS.green : COLORS.primaryDark}
+              />
+              <Text style={[styles.tileStatus, { color: status.done ? COLORS.green : COLORS.primaryDark }]} numberOfLines={1}>
+                {status.text}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.tileStatusRow}>
+              <Ionicons name="return-down-back-outline" size={13} color={color.fg} />
+              <Text style={[styles.tileStatus, { color: color.fg }]}>
+                Restes · repas {index + 1}/{ordered.length}
+              </Text>
+            </View>
+          )}
+        </View>
+        {isFirst && (
+          <TouchableOpacity
+            onPress={() => toggleCooked(entry)}
+            hitSlop={6}
+            style={[styles.cookCheck, { borderColor: color.ring }, entry.cooked && styles.cookCheckDone]}
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: entry.cooked }}
+            accessibilityLabel={`${recipe?.name ?? 'Plat'} cuisiné`}
+          >
+            {entry.cooked && <Ionicons name="checkmark" size={17} color="#fff" />}
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
     );
   };
 
-  const handleRemove = (recipeId: string) => {
-    removeFromWeekMenu(householdId, menuIds, recipeId);
+  const renderSlot = (day: number, meal: Meal) => {
+    const key = slotKey(day, meal);
+    const here = placed.filter((e) => e.slots.includes(key));
+    return (
+      <View key={key} style={styles.slotRow}>
+        <Text style={styles.slotLabel}>{meal === 'midi' ? 'Midi' : 'Soir'}</Text>
+        <View style={{ flex: 1, gap: 6 }}>
+          {here.length > 0 ? (
+            here.map((e) => renderTile(e, key))
+          ) : (
+            <TouchableOpacity style={styles.emptySlot} onPress={() => openAdd(key)} accessibilityRole="button">
+              <Ionicons name="add" size={16} color={COLORS.textSecondary} />
+              <Text style={styles.emptySlotText}>Ajouter un plat</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
   };
 
-  const handleAdd = (recipeId: string) => {
-    addToWeekMenu(householdId, menuIds, recipeId);
-    setShowPicker(false);
-    const recipe = recipes.find((r) => r.id === recipeId);
-    if (recipe) notify(householdId, '📅 Menu de la semaine', `${senderName()} a ajouté « ${recipe.name} » au menu`);
-  };
+  const missingByGroup = [
+    ...familyGroups
+      .map((g) => ({ id: g.id, name: g.name, items: missingItems.filter((i) => i.groupId === g.id) }))
+      .filter((g) => g.items.length > 0),
+    ...(() => {
+      const rest = missingItems.filter((i) => !i.groupId || !familyGroups.some((g) => g.id === i.groupId));
+      return rest.length ? [{ id: '__autres', name: 'Autres', items: rest }] : [];
+    })(),
+  ];
 
   return (
     <View style={styles.container}>
       <ScreenHeader
-        subtitle="Plats de la semaine"
+        subtitle={formatWeekRange(weekId)}
         title="Menu"
-        right={<RoundButton icon="refresh" label="Refaire le menu" onPress={handleReset} />}
+        right={<RoundButton icon="bookmark-outline" label="Menus enregistrés" onPress={() => setShowSaved(true)} />}
       />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
+      <View style={styles.weekSwitch}>
+        <Segmented
+          stretch
+          value={offset}
+          onChange={setOffset}
+          options={[
+            { value: '-1', label: 'Sem. passée' },
+            { value: '0', label: 'Cette semaine' },
+            { value: '1', label: 'Sem. prochaine' },
+          ]}
+        />
+        <Text style={styles.caption}>Chaque dimanche, la semaine la plus ancienne est effacée.</Text>
+      </View>
 
-        {/* ── Plats sélectionnés ───────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Plats sélectionnés</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setShowPicker(true)}>
-              <Text style={styles.addBtnText}>+ Ajouter</Text>
+      {/* Frise des jours */}
+      <View style={styles.dayStrip}>
+        {DAY_SHORT.map((d, day) => {
+          const isToday = today === day;
+          return (
+            <TouchableOpacity
+              key={d}
+              style={[styles.dayPill, isToday && styles.dayPillToday]}
+              onPress={() => scrollToDay(day)}
+              accessibilityRole="button"
+              accessibilityLabel={`${d} ${dateOf(weekId, day).getDate()}${cookDays.has(day) ? ', plat à cuisiner' : ''}`}
+            >
+              <Text style={[styles.dayPillName, isToday && { color: '#fff' }]}>{d}</Text>
+              <Text style={[styles.dayPillDate, isToday && { color: '#fff' }]}>{dateOf(weekId, day).getDate()}</Text>
+              {cookDays.has(day) && <View style={[styles.cookDot, isToday && { backgroundColor: '#fff' }]} />}
             </TouchableOpacity>
-          </View>
+          );
+        })}
+      </View>
 
-          {menuRecipes.length === 0 ? (
-            <Text style={styles.emptyText}>Aucun plat sélectionné. Appuie sur + Ajouter.</Text>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
+        {/* Articles à acheter */}
+        {entries.length > 0 && (
+          missingItems.length === 0 ? (
+            <View style={[styles.missingPill, { backgroundColor: COLORS.greenSoft }]}>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.green} />
+              <Text style={[styles.missingPillText, { color: COLORS.green }]}>Tout est à la casa pour ces plats</Text>
+            </View>
           ) : (
-            menuRecipes.map((recipe) => {
-              const isCollapsed = collapsedRecipes.has(recipe.id);
-              const ings = recipe.ingredients ?? [];
-              return (
-                <View key={recipe.id}>
-                  <TouchableOpacity
-                    style={styles.recipeGroupHeader}
-                    onPress={() => toggleRecipe(recipe.id)}
-                  >
-                    <Text style={styles.recipeChevron}>{isCollapsed ? '▶' : '▼'}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.recipeName}>{recipe.name}</Text>
-                      {recipe.description ? (
-                        <Text style={styles.recipeDesc} numberOfLines={1}>{recipe.description}</Text>
-                      ) : null}
-                    </View>
-                    <Text style={styles.recipeIngCount}>{ings.length} ing.</Text>
-                    <TouchableOpacity onPress={() => handleRemove(recipe.id)} style={styles.removeBtn}>
-                      <Text style={styles.removeBtnText}>✕</Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                  {!isCollapsed && ings.map((ing) => (
-                    <View key={ing.id} style={styles.ingRow}>
-                      <Text style={styles.ingName}>{ing.name}</Text>
-                      {ing.quantity ? <Text style={styles.ingQty}>{ing.quantity}</Text> : null}
+            <TouchableOpacity
+              style={styles.missingPill}
+              onPress={() => setShowMissing((v) => !v)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showMissing }}
+            >
+              <Ionicons name="cart-outline" size={18} color={COLORS.dangerText} />
+              <Text style={styles.missingPillText}>
+                {missingItems.length} article{missingItems.length > 1 ? 's' : ''} à acheter pour ces plats
+              </Text>
+              <Ionicons name={showMissing ? 'chevron-up' : 'chevron-down'} size={16} color={COLORS.dangerText} />
+            </TouchableOpacity>
+          )
+        )}
+        {showMissing && missingItems.length > 0 && (
+          <View style={styles.card}>
+            {missingByGroup.map((g) => (
+              <View key={g.id} style={{ gap: 6 }}>
+                <Text style={styles.groupLabel}>{g.name}</Text>
+                <View style={styles.chips}>
+                  {g.items.map((item) => (
+                    <View key={item.id} style={styles.missingChip}>
+                      <Text style={styles.missingChipText}>{item.name}{item.unit ? ` · ${item.unit}` : ''}</Text>
                     </View>
                   ))}
                 </View>
-              );
-            })
-          )}
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Plats sans créneau (ancien menu) */}
+        {unplaced.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>À placer</Text>
+            <Text style={styles.cardHint}>Ces plats n'ont pas encore de jour. Touche-les pour choisir leurs repas.</Text>
+            <View style={styles.chips}>
+              {unplaced.map((e) => (
+                <TouchableOpacity key={e.id} style={styles.unplacedChip} onPress={() => openEdit(e)} accessibilityRole="button">
+                  <Text style={styles.unplacedChipText}>{recipeOf(e.recipeId)?.name ?? 'Recette supprimée'}</Text>
+                  <Ionicons name="calendar-outline" size={14} color={COLORS.primary} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Planning */}
+        <View style={styles.planning} onLayout={(e) => { planningY.current = e.nativeEvent.layout.y; }}>
+          {DAY_SHORT.map((d, day) => {
+            const past = weekIsPast || (today !== null && day < today);
+            return (
+              <View
+                key={d}
+                style={[styles.dayRow, day > 0 && styles.dayRowBorder, past && { opacity: 0.55 }]}
+                onLayout={(e) => { dayY.current[day] = e.nativeEvent.layout.y; }}
+              >
+                <View style={styles.dayLabel}>
+                  <Text style={[styles.dayLabelName, today === day && { color: COLORS.primary }]}>{d}</Text>
+                  <Text style={styles.dayLabelDate}>{dateOf(weekId, day).getDate()}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 6 }}>{MEALS.map((meal) => renderSlot(day, meal))}</View>
+              </View>
+            );
+          })}
         </View>
 
-        {/* ── Articles à acheter ───────────────────────── */}
-        {menuIds.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Articles à acheter</Text>
-
-            {allReady ? (
-              <View style={styles.allReadyBox}>
-                <Text style={styles.allReadyEmoji}>🎉</Text>
-                <Text style={styles.allReadyTitle}>Tout est à la casa !</Text>
-                <Text style={styles.allReadySubtitle}>
-                  Tous les ingrédients sont disponibles pour faire ces plats.
-                </Text>
-              </View>
-            ) : (() => {
-              // Grouper les articles manquants par groupe
-              const grouped = familyGroups
-                .map((g) => ({ group: g, items: missingItems.filter((i) => i.groupId === g.id) }))
-                .filter((g) => g.items.length > 0);
-              const ungrouped = missingItems.filter(
-                (i) => !i.groupId || !familyGroups.find((g) => g.id === i.groupId)
-              );
-
-              return (
-                <>
-                  {grouped.map(({ group, items }) => {
-                    const isCollapsed = collapsedMissingGroups.has(group.id);
-                    return (
-                      <View key={group.id}>
-                        <TouchableOpacity
-                          style={styles.missingGroupHeader}
-                          onPress={() => toggleMissingGroup(group.id)}
-                        >
-                          <Text style={styles.missingGroupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
-                          <Text style={styles.missingGroupName}>📦 {group.name}</Text>
-                          <Text style={styles.missingGroupCount}>{items.length}</Text>
-                        </TouchableOpacity>
-                        {!isCollapsed && items.map((item) => (
-                          <View key={item.id} style={styles.missingRow}>
-                            <Text style={styles.missingIcon}>🔴</Text>
-                            <Text style={styles.missingName}>{item.name}</Text>
-                            {item.unit ? <Text style={styles.missingUnit}>{item.unit}</Text> : null}
-                          </View>
-                        ))}
-                      </View>
-                    );
-                  })}
-                  {ungrouped.map((item) => (
-                    <View key={item.id} style={styles.missingRow}>
-                      <Text style={styles.missingIcon}>🔴</Text>
-                      <Text style={styles.missingName}>{item.name}</Text>
-                      {item.unit ? <Text style={styles.missingUnit}>{item.unit}</Text> : null}
-                    </View>
-                  ))}
-                </>
-              );
-            })()}
-          </View>
+        {entries.length > 0 && (
+          <TouchableOpacity style={styles.clearBtn} onPress={confirmClear} accessibilityRole="button">
+            <Ionicons name="trash-outline" size={16} color={COLORS.dangerText} />
+            <Text style={styles.clearBtnText}>Vider la semaine</Text>
+          </TouchableOpacity>
         )}
       </ScrollView>
 
-      {/* Modal picker de recettes */}
-      <Modal visible={showPicker} animationType="slide" onRequestClose={() => setShowPicker(false)}>
-        <SafeAreaView style={styles.pickerContainer}>
-          <View style={styles.pickerHeader}>
-            <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.backBtn}>
-              <Text style={styles.backBtnText}>← Retour</Text>
-            </TouchableOpacity>
-            <Text style={styles.pickerTitle}>Choisir un plat</Text>
-            <View style={{ width: scale(80) }} />
-          </View>
+      <MenuEntrySheet
+        visible={editor.visible}
+        weekId={weekId}
+        recipes={recipes}
+        initial={editor.initial}
+        presetSlot={editor.presetSlot}
+        householdId={householdId}
+        onSubmit={handleSubmit}
+        onClose={closeEditor}
+      />
 
-          <ScrollView>
-            {availableRecipes.length === 0 ? (
-              <Text style={styles.emptyText}>
-                Toutes vos recettes sont déjà dans le menu.
-              </Text>
-            ) : (
-              availableRecipes.map((recipe) => (
-                <TouchableOpacity
-                  key={recipe.id}
-                  style={styles.pickerRow}
-                  onPress={() => handleAdd(recipe.id)}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.pickerRecipeName}>{recipe.name}</Text>
-                    {recipe.description ? (
-                      <Text style={styles.pickerRecipeDesc} numberOfLines={1}>
-                        {recipe.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                  <Text style={styles.pickerAddIcon}>＋</Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+      <SavedMenusSheet
+        visible={showSaved}
+        householdId={householdId}
+        uid={user?.uid ?? ''}
+        weekId={weekId}
+        weekLabel={WEEK_LABELS[offset]}
+        entries={entries}
+        recipes={recipes}
+        onApplied={(dest, menu) => {
+          setShowSaved(false);
+          setOffset(dest === currentWeek ? '0' : '1');
+          notify(householdId, '📅 Menu de la semaine', `${senderName()} a appliqué le menu « ${menu.name} »`);
+        }}
+        onClose={() => setShowSaved(false)}
+      />
     </View>
   );
 }
@@ -253,124 +426,119 @@ export default function WeekMenuScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
+  weekSwitch: { paddingHorizontal: SPACING.lg - 4, gap: 6, paddingBottom: SPACING.sm + 2 },
+  caption: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, paddingHorizontal: SPACING.xs },
 
-  section: {
+  dayStrip: { flexDirection: 'row', gap: 6, paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.md - 4 },
+  dayPill: {
+    flex: 1,
+    height: 54,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayPillToday: { backgroundColor: COLORS.primary },
+  dayPillName: { fontSize: 12, fontWeight: '700', color: COLORS.textMuted },
+  dayPillDate: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  cookDot: { position: 'absolute', bottom: 5, width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+
+  missingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
     marginHorizontal: SPACING.lg - 4,
-    marginBottom: SPACING.md - 2,
+    marginBottom: SPACING.sm + 4,
+    minHeight: 44,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.dangerSoft,
+  },
+  missingPillText: { flex: 1, fontSize: 14, fontWeight: '800', color: COLORS.dangerText },
+
+  card: {
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.md - 4,
     backgroundColor: COLORS.surface,
     borderRadius: 24,
-    overflow: 'hidden',
+    padding: SPACING.md,
+    gap: SPACING.sm + 2,
     ...SHADOWS.soft,
   },
-  sectionHeaderRow: {
+  cardTitle: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  cardHint: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted },
+  groupLabel: { fontSize: 13, fontWeight: '800', color: COLORS.mustardText },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  missingChip: { backgroundColor: COLORS.dangerSoft, borderRadius: BORDER_RADIUS.full, paddingHorizontal: 12, paddingVertical: 6 },
+  missingChipText: { fontSize: 14, fontWeight: '800', color: COLORS.dangerText },
+  unplacedChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md + 2,
-    paddingVertical: SPACING.md - 2,
-  },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
-  addBtn: {
-    backgroundColor: COLORS.primary,
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  addBtnText: { color: '#fff', fontWeight: '800', fontSize: FONT_SIZE.md },
+  unplacedChipText: { fontSize: 14, fontWeight: '800', color: COLORS.primary },
 
-  emptyText: {
-    fontSize: FONT_SIZE.md,
-    color: COLORS.textSecondary,
-    padding: SPACING.md,
-    fontStyle: 'italic',
-  },
+  planning: { paddingHorizontal: SPACING.lg - 4 },
+  dayRow: { flexDirection: 'row', paddingVertical: SPACING.sm + 2 },
+  dayRowBorder: { borderTopWidth: 1, borderTopColor: COLORS.sandDark },
+  dayLabel: { width: 44, paddingTop: 4 },
+  dayLabelName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  dayLabelDate: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
+  slotRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  slotLabel: { width: 40, paddingTop: 15, fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
 
-  recipeGroupHeader: {
+  tile: {
+    minHeight: 50,
+    borderRadius: 16,
+    paddingLeft: SPACING.md - 4,
+    paddingRight: SPACING.sm,
+    paddingVertical: SPACING.sm - 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surfaceWarm,
-    gap: SPACING.xs,
+    gap: SPACING.sm,
   },
-  recipeChevron: { fontSize: 11, color: COLORS.textSecondary },
-  recipeName: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
-  recipeDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 1 },
-  recipeIngCount: { fontSize: FONT_SIZE.sm, color: COLORS.mustard, fontWeight: '600' },
-  removeBtn: { padding: SPACING.xs },
-  removeBtnText: { fontSize: FONT_SIZE.lg, color: COLORS.textSecondary },
-  ingRow: {
-    flexDirection: 'row',
+  tileName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  tileCount: { fontSize: 12, fontWeight: '800' },
+  tileStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 },
+  tileStatus: { fontSize: 12, fontWeight: '800', flexShrink: 1 },
+  cookCheck: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2.5,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    justifyContent: 'center',
   },
-  ingName: { flex: 1, fontSize: FONT_SIZE.md, color: COLORS.text },
-  ingQty: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  missingGroupHeader: {
+  cookCheckDone: { backgroundColor: COLORS.green, borderColor: COLORS.green },
+  emptySlot: {
+    minHeight: 50,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.sandDark,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  emptySlotText: { fontSize: 14, fontWeight: '800', color: COLORS.textSecondary },
+
+  clearBtn: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: SPACING.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm + 2,
-    backgroundColor: COLORS.surfaceWarm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.xs,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.dangerSoft,
   },
-  missingGroupChevron: { fontSize: 11, color: COLORS.textSecondary },
-  missingGroupName: { flex: 1, fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.mustard, textTransform: 'uppercase', letterSpacing: 0.5 },
-  missingGroupCount: {
-    fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.textSecondary,
-    backgroundColor: COLORS.border, borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 7, paddingVertical: 1, overflow: 'hidden',
-  },
-
-  allReadyBox: {
-    alignItems: 'center',
-    padding: SPACING.xl,
-    gap: SPACING.sm,
-  },
-  allReadyEmoji: { fontSize: moderateScale(48) },
-  allReadyTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.green },
-  allReadySubtitle: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, textAlign: 'center' },
-
-  missingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    gap: SPACING.sm,
-  },
-  missingIcon: { fontSize: 16 },
-  missingName: { flex: 1, fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.danger },
-  missingUnit: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-
-  // Picker modal
-  pickerContainer: { flex: 1, backgroundColor: COLORS.background },
-  pickerHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backBtn: { width: scale(80) },
-  backBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.md },
-  pickerTitle: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
-  pickerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  pickerRecipeName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
-  pickerRecipeDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
-  pickerAddIcon: { fontSize: moderateScale(22), color: COLORS.primary, fontWeight: '700' },
+  clearBtnText: { fontSize: FONT_SIZE.md, fontWeight: '800', color: COLORS.dangerText },
 });

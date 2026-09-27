@@ -79,3 +79,34 @@ export interface MemberProfile {
   displayName: string;
   photo?: string; // JPEG base64
 }
+
+// ─── Menu de la semaine ──────────────────────────────────────────────────────
+
+export type Meal = 'midi' | 'soir';
+export type SlotKey = `${number}-${Meal}`; // "0-midi" = lundi midi, "6-soir" = dimanche soir
+
+// Un plat du menu : cuisiné une fois, mangé sur un ou plusieurs créneaux (pas forcément consécutifs)
+export interface MenuEntry {
+  id: string;
+  recipeId: string;
+  slots: SlotKey[];     // vide = « à placer »
+  cookDay: number;      // jour de cuisson relatif au lundi : -1 = dimanche précédent … 6
+  cookMeal: Meal;
+  cooked: boolean;
+  cookedAt: number | null;
+}
+
+// households/{id}/weeks/{weekId} — weekId = date du lundi (AAAA-MM-JJ)
+export interface WeekPlan {
+  weekId: string;
+  entries: MenuEntry[];
+}
+
+// households/{id}/savedMenus/{id} — positions relatives, réutilisables sur n'importe quelle semaine
+export interface SavedMenu {
+  id: string;
+  name: string;
+  entries: Omit<MenuEntry, 'id' | 'cooked' | 'cookedAt'>[];
+  createdBy: string;
+  createdAt: number;
+}

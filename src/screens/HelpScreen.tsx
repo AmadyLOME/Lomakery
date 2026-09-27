@@ -101,23 +101,31 @@ const SECTIONS: Section[] = [
   {
     id: 'menu',
     emoji: '📅',
-    title: 'Plat de la semaine',
+    title: 'Menu de la semaine',
     content: [
       {
-        question: 'Composer le menu de la semaine',
-        answer: 'Dans l\'onglet Menu, appuyez sur "+ Ajouter" pour choisir parmi vos recettes. Les plats sélectionnés apparaissent dans la liste du menu.',
+        question: 'Planifier un plat',
+        answer: 'Dans l\'onglet Menu, touchez un créneau « Ajouter un plat » (Midi ou Soir). Choisissez la recette puis cochez les repas où elle sera mangée : un même plat peut couvrir plusieurs repas, pas forcément à la suite.',
+      },
+      {
+        question: 'Quand cuisiner ?',
+        answer: 'Pour chaque plat, indiquez s\'il est cuisiné le jour même, la veille ou un autre jour. Le premier repas affiche « À cuisiner… », les suivants « Restes ». Cochez le rond quand c\'est fait : il devient « Cuisiné ». Un point orange dans la frise signale les jours où il faut cuisiner.',
+      },
+      {
+        question: 'Modifier ou retirer un plat',
+        answer: 'Touchez le plat dans le planning : marquer comme cuisiné, modifier ses repas, ou le retirer du menu. « Vider la semaine » en bas du planning retire tout d\'un coup.',
       },
       {
         question: 'Articles à acheter pour le menu',
-        answer: 'La section "Articles à acheter" liste automatiquement les ingrédients de vos plats qui sont marqués "À acheter" dans votre liste. Si tout est disponible à la casa, un message 🎉 s\'affiche.',
+        answer: 'La pastille rouge au-dessus du planning compte les ingrédients de vos plats marqués « À acheter ». Touchez-la pour voir la liste par rayon.',
       },
       {
-        question: 'Retirer un plat du menu',
-        answer: 'Appuyez sur le ✕ à droite du plat dans la liste du menu.',
+        question: 'Trois semaines seulement',
+        answer: 'L\'app garde la semaine passée, l\'actuelle et la prochaine. Chaque dimanche, la semaine la plus ancienne est effacée.',
       },
       {
-        question: 'Refaire le menu',
-        answer: 'Le bouton "🔄 Refaire" en haut à droite vide tous les plats du menu d\'un coup. Le menu est partagé avec tous les membres du foyer.',
+        question: 'Enregistrer et réutiliser un menu',
+        answer: 'Le bouton signet en haut à droite ouvre « Menus enregistrés » : donnez un nom au menu de la semaine affichée pour le garder, puis réutilisez-le plus tard pour cette semaine ou la prochaine (il remplace les plats existants).',
       },
     ],
   },
@@ -128,7 +136,7 @@ const SECTIONS: Section[] = [
     content: [
       {
         question: 'Inviter votre partenaire',
-        answer: 'Allez dans Profil → votre foyer affiche un code d\'invitation. Partagez-le via le bouton ↗. Votre partenaire crée un compte, choisit "Rejoindre" et entre le code.',
+        answer: 'Allez dans Profil → votre foyer affiche un code d\'invitation. Partagez-le avec le bouton Partager (ou copiez-le). Votre partenaire crée un compte, choisit "Rejoindre" et entre le code.',
       },
       {
         question: 'Synchronisation en temps réel',
