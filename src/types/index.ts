@@ -94,6 +94,14 @@ export interface MenuEntry {
   cookMeal: Meal;
   cooked: boolean;
   cookedAt: number | null;
+  eaten?: SlotKey[];        // repas effectivement mangés
+  skipped?: SkippedMeal[];  // repas sautés (restent affichés, grisés)
+}
+
+// Un repas sauté, éventuellement reporté sur un autre créneau (ajouté à `slots`)
+export interface SkippedMeal {
+  slot: SlotKey;
+  to: SlotKey | null;
 }
 
 // households/{id}/weeks/{weekId} — weekId = date du lundi (AAAA-MM-JJ)
@@ -106,7 +114,7 @@ export interface WeekPlan {
 export interface SavedMenu {
   id: string;
   name: string;
-  entries: Omit<MenuEntry, 'id' | 'cooked' | 'cookedAt'>[];
+  entries: Pick<MenuEntry, 'recipeId' | 'slots' | 'cookDay' | 'cookMeal'>[];
   createdBy: string;
   createdAt: number;
 }

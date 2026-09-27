@@ -112,6 +112,10 @@ const SECTIONS: Section[] = [
         answer: 'Pour chaque plat, indiquez s\'il est cuisiné le jour même, la veille ou un autre jour. Le premier repas affiche « À cuisiner… », les suivants « Restes ». Cochez le rond quand c\'est fait : il devient « Cuisiné ». Un point orange dans la frise signale les jours où il faut cuisiner.',
       },
       {
+        question: 'Repas mangé, sauté ou reporté',
+        answer: 'Touchez un repas du planning : « Mangé ✓ » le passe en vert. « Sauté… » ouvre la grille de la semaine pour le reporter sur un autre créneau (ou le sauter simplement) ; le repas sauté reste affiché, grisé, et « Annuler « sauté » » remet tout comme avant.',
+      },
+      {
         question: 'Modifier ou retirer un plat',
         answer: 'Touchez le plat dans le planning : marquer comme cuisiné, modifier ses repas, ou le retirer du menu. « Vider la semaine » en bas du planning retire tout d\'un coup.',
       },

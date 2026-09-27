@@ -7,6 +7,7 @@ import RoundButton from '../components/RoundButton';
 import Segmented from '../components/Segmented';
 import MenuEntrySheet from '../components/MenuEntrySheet';
 import SavedMenusSheet from '../components/SavedMenusSheet';
+import ReportMealSheet, { slotLabel } from '../components/ReportMealSheet';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
@@ -15,6 +16,10 @@ import {
   upsertEntry,
   removeEntry,
   setCooked,
+  setEaten,
+  skipMeal,
+  unskipMeal,
+  activeSlots,
   clearWeek,
   cleanupOldWeeks,
   migrateLegacyMenu,
@@ -73,6 +78,7 @@ export default function WeekMenuScreen() {
   const [editor, setEditor] = useState<EditorState>({ visible: false, initial: null, presetSlot: null });
   const [showSaved, setShowSaved] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
+  const [report, setReport] = useState<{ entry: MenuEntry; slot: SlotKey } | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
   const dayY = useRef<number[]>([]);
@@ -115,6 +121,10 @@ export default function WeekMenuScreen() {
     return familyItems.filter((item) => !item.checked && names.has(item.name.toLowerCase().trim()));
   }, [entries, recipes, familyItems]);
 
+  // Créneaux occupés par les autres plats (indiqués dans les grilles)
+  const busySlotsExcept = (entryId: string | null) =>
+    placed.filter((e) => e.id !== entryId).flatMap((e) => activeSlots(e));
+
   // Jours où il reste un plat à cuisiner
   const cookDays = new Set(placed.filter((e) => !e.cooked).map((e) => e.cookDay));
 
@@ -140,14 +150,43 @@ export default function WeekMenuScreen() {
 
   const toggleCooked = (entry: MenuEntry) => setCooked(householdId, weekId, entry.id, !entry.cooked);
 
-  const openEntryActions = (entry: MenuEntry) => {
+  const openEntryActions = (entry: MenuEntry, slot: SlotKey) => {
     const name = recipeOf(entry.recipeId)?.name ?? 'Plat';
-    Alert.alert(name, undefined, [
-      { text: entry.cooked ? 'Pas encore cuisiné' : 'Marquer comme cuisiné', onPress: () => toggleCooked(entry) },
-      { text: 'Modifier', onPress: () => openEdit(entry) },
-      { text: 'Retirer du menu', style: 'destructive', onPress: () => removeEntry(householdId, weekId, entry.id) },
-      { text: 'Annuler', style: 'cancel' },
+    const skipped = (entry.skipped ?? []).find((sk) => sk.slot === slot);
+    const eaten = (entry.eaten ?? []).includes(slot);
+    const isCookSlot = activeSlots(entry)[0] === slot;
+    const common = [
+      { text: 'Modifier le plat', onPress: () => openEdit(entry) },
+      { text: 'Retirer du menu', style: 'destructive' as const, onPress: () => removeEntry(householdId, weekId, entry.id) },
+      { text: 'Annuler', style: 'cancel' as const },
+    ];
+    if (skipped) {
+      Alert.alert(`${name} · ${slotLabel(slot)}`, skipped.to ? `Reporté à ${slotLabel(skipped.to)}` : 'Repas sauté', [
+        { text: 'Annuler « sauté »', onPress: () => unskipMeal(householdId, weekId, entry.id, slot) },
+        ...(!skipped.to ? [{ text: 'Reporter…', onPress: () => setReport({ entry, slot }) }] : []),
+        ...common,
+      ]);
+      return;
+    }
+    Alert.alert(`${name} · ${slotLabel(slot)}`, undefined, [
+      { text: eaten ? 'Pas encore mangé' : 'Mangé ✓', onPress: () => setEaten(householdId, weekId, entry.id, slot, !eaten) },
+      { text: 'Sauté… (reporter)', onPress: () => setReport({ entry, slot }) },
+      ...(isCookSlot
+        ? [{ text: entry.cooked ? 'Pas encore cuisiné' : 'Marquer comme cuisiné', onPress: () => toggleCooked(entry) }]
+        : []),
+      ...common,
     ]);
+  };
+
+  const handleReport = async (to: SlotKey | null) => {
+    if (!report) return;
+    const { entry, slot } = report;
+    setReport(null);
+    try {
+      await skipMeal(householdId, weekId, entry.id, slot, to);
+    } catch (e: any) {
+      Alert.alert('Erreur', "Le repas n'a pas pu être reporté.\n" + (e?.message ?? ''));
+    }
   };
 
   const confirmClear = () =>
@@ -164,7 +203,7 @@ export default function WeekMenuScreen() {
   // ─── Rendu ─────────────────────────────────────────────────────────────────
 
   const cookStatus = (entry: MenuEntry) => {
-    const first = parseSlot(sortSlots(entry.slots)[0]);
+    const first = parseSlot(activeSlots(entry)[0] ?? sortSlots(entry.slots)[0]);
     const veille = entry.cookDay === first.day - 1 && entry.cookMeal === 'soir';
     if (entry.cooked) {
       const d = entry.cookedAt ? new Date(entry.cookedAt) : dateOf(weekId, entry.cookDay);
@@ -181,24 +220,53 @@ export default function WeekMenuScreen() {
   const renderTile = (entry: MenuEntry, slot: SlotKey) => {
     const recipe = recipeOf(entry.recipeId);
     const color = colorOf(entry);
-    const ordered = sortSlots(entry.slots);
-    const index = ordered.indexOf(slot);
+    const active = activeSlots(entry);
+    const index = active.indexOf(slot);
+    const skipped = (entry.skipped ?? []).find((sk) => sk.slot === slot);
+    const eaten = (entry.eaten ?? []).includes(slot);
+    const reportedHere = (entry.skipped ?? []).some((sk) => sk.to === slot);
     const isFirst = index === 0;
+    const name = recipe?.name ?? 'Recette supprimée';
+
+    // Repas sauté : grisé et barré, avec son éventuel report
+    if (skipped) {
+      return (
+        <TouchableOpacity
+          key={`${entry.id}-${slot}`}
+          style={[styles.tile, styles.tileSkipped]}
+          onPress={() => openEntryActions(entry, slot)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+        >
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.tileName, styles.tileNameSkipped]} numberOfLines={1}>{name}</Text>
+            <View style={styles.tileStatusRow}>
+              <Ionicons name="play-skip-forward-outline" size={13} color={COLORS.textSecondary} />
+              <Text style={[styles.tileStatus, { color: COLORS.textSecondary }]} numberOfLines={1}>
+                Sauté{skipped.to ? ` · reporté à ${slotLabel(skipped.to)}` : ''}
+              </Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+      );
+    }
+
     const status = isFirst ? cookStatus(entry) : null;
+    const suffix = `${eaten ? ' · mangé' : ''}${reportedHere ? ' · reporté' : ''}`;
 
     return (
       <TouchableOpacity
         key={`${entry.id}-${slot}`}
         style={[styles.tile, { backgroundColor: color.bg }]}
-        onPress={() => openEntryActions(entry)}
+        onPress={() => openEntryActions(entry, slot)}
         activeOpacity={0.8}
         accessibilityRole="button"
       >
         <View style={{ flex: 1 }}>
           <Text style={styles.tileName} numberOfLines={1}>
-            {recipe?.name ?? 'Recette supprimée'}
-            {isFirst && ordered.length > 1 ? (
-              <Text style={[styles.tileCount, { color: color.fg }]}> · {ordered.length} repas</Text>
+            {name}
+            {isFirst && active.length > 1 ? (
+              <Text style={[styles.tileCount, { color: color.fg }]}> · {active.length} repas</Text>
             ) : null}
           </Text>
           {status ? (
@@ -209,14 +277,18 @@ export default function WeekMenuScreen() {
                 color={status.done ? COLORS.green : COLORS.primaryDark}
               />
               <Text style={[styles.tileStatus, { color: status.done ? COLORS.green : COLORS.primaryDark }]} numberOfLines={1}>
-                {status.text}
+                {status.text}{suffix}
               </Text>
             </View>
           ) : (
             <View style={styles.tileStatusRow}>
-              <Ionicons name="return-down-back-outline" size={13} color={color.fg} />
-              <Text style={[styles.tileStatus, { color: color.fg }]}>
-                Restes · repas {index + 1}/{ordered.length}
+              <Ionicons
+                name={eaten ? 'checkmark-done' : 'return-down-back-outline'}
+                size={13}
+                color={eaten ? COLORS.green : color.fg}
+              />
+              <Text style={[styles.tileStatus, { color: eaten ? COLORS.green : color.fg }]} numberOfLines={1}>
+                {eaten ? 'Mangé' : 'Restes'} · repas {index + 1}/{active.length}{reportedHere ? ' · reporté' : ''}
               </Text>
             </View>
           )}
@@ -228,7 +300,7 @@ export default function WeekMenuScreen() {
             style={[styles.cookCheck, { borderColor: color.ring }, entry.cooked && styles.cookCheckDone]}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: entry.cooked }}
-            accessibilityLabel={`${recipe?.name ?? 'Plat'} cuisiné`}
+            accessibilityLabel={`${name} cuisiné`}
           >
             {entry.cooked && <Ionicons name="checkmark" size={17} color="#fff" />}
           </TouchableOpacity>
@@ -400,8 +472,20 @@ export default function WeekMenuScreen() {
         initial={editor.initial}
         presetSlot={editor.presetSlot}
         householdId={householdId}
+        busySlots={busySlotsExcept(editor.initial?.id ?? null)}
         onSubmit={handleSubmit}
         onClose={closeEditor}
+      />
+
+      <ReportMealSheet
+        visible={!!report}
+        weekId={weekId}
+        dishName={report ? recipeOf(report.entry.recipeId)?.name ?? 'Plat' : ''}
+        slot={report?.slot ?? null}
+        ownSlots={report ? activeSlots(report.entry) : []}
+        busySlots={report ? busySlotsExcept(report.entry.id) : []}
+        onReport={handleReport}
+        onClose={() => setReport(null)}
       />
 
       <SavedMenusSheet
@@ -516,6 +600,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cookCheckDone: { backgroundColor: COLORS.green, borderColor: COLORS.green },
+  tileSkipped: { backgroundColor: COLORS.sand, opacity: 0.75 },
+  tileNameSkipped: { textDecorationLine: 'line-through', color: COLORS.textSecondary },
   emptySlot: {
     minHeight: 50,
     borderRadius: 16,

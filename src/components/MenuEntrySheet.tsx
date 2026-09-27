@@ -4,10 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import RoundButton from './RoundButton';
 import Segmented from './Segmented';
+import SlotGrid from './SlotGrid';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import { Meal, MenuEntry, Recipe, SlotKey } from '../types';
-import { DAY_SHORT, formatDayShort, parseSlot, slotKey, sortSlots } from '../utils/weeks';
-import { newEntryId } from '../services/weekPlan';
+import { DAY_SHORT, formatDayShort, parseSlot, sortSlots } from '../utils/weeks';
+import { activeSlots, newEntryId } from '../services/weekPlan';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
 
 type CookMode = 'same' | 'veille' | 'autre';
@@ -19,14 +20,13 @@ interface Props {
   initial: MenuEntry | null;   // plat à modifier, sinon ajout
   presetSlot: SlotKey | null;  // créneau touché dans le planning
   householdId: string;
+  busySlots: SlotKey[];        // créneaux déjà pris par d'autres plats
   onSubmit: (entry: MenuEntry) => void;
   onClose: () => void;
 }
 
-const MEALS: Meal[] = ['midi', 'soir'];
-
 function cookModeOf(entry: MenuEntry): CookMode {
-  const first = sortSlots(entry.slots)[0];
+  const first = activeSlots(entry)[0];
   if (!first) return 'same';
   const { day, meal } = parseSlot(first);
   if (entry.cookDay === day && entry.cookMeal === meal) return 'same';
@@ -34,7 +34,7 @@ function cookModeOf(entry: MenuEntry): CookMode {
   return 'autre';
 }
 
-export default function MenuEntrySheet({ visible, weekId, recipes, initial, presetSlot, householdId, onSubmit, onClose }: Props) {
+export default function MenuEntrySheet({ visible, weekId, recipes, initial, presetSlot, householdId, busySlots, onSubmit, onClose }: Props) {
   const [recipeId, setRecipeId] = useState<string | null>(null);
   const [slots, setSlots] = useState<SlotKey[]>([]);
   const [mode, setMode] = useState<CookMode>('same');
@@ -47,7 +47,7 @@ export default function MenuEntrySheet({ visible, weekId, recipes, initial, pres
     if (!visible) return;
     if (initial) {
       setRecipeId(initial.recipeId);
-      setSlots(initial.slots);
+      setSlots(activeSlots(initial));
       setMode(cookModeOf(initial));
       setOtherDay(initial.cookDay);
       setOtherMeal(initial.cookMeal);
@@ -81,14 +81,20 @@ export default function MenuEntrySheet({ visible, weekId, recipes, initial, pres
 
   const submit = () => {
     if (!canSubmit || !cook || !recipe) return;
+    // Les repas sautés restent affichés (sauf s'ils sont recochés) ; un report décoché est oublié
+    const skipped = (initial?.skipped ?? [])
+      .filter((sk) => !sorted.includes(sk.slot))
+      .map((sk) => ({ slot: sk.slot, to: sk.to && sorted.includes(sk.to) ? sk.to : null }));
     onSubmit({
       id: initial?.id ?? newEntryId(),
       recipeId: recipe.id,
-      slots: sorted,
+      slots: sortSlots([...sorted, ...skipped.map((sk) => sk.slot)]),
       cookDay: cook.day,
       cookMeal: cook.meal,
       cooked: initial?.cooked ?? false,
       cookedAt: initial?.cookedAt ?? null,
+      eaten: (initial?.eaten ?? []).filter((sl) => sorted.includes(sl)),
+      skipped,
     });
   };
 
@@ -140,37 +146,7 @@ export default function MenuEntrySheet({ visible, weekId, recipes, initial, pres
           {/* 1. Créneaux */}
           <View style={styles.block}>
             <Text style={styles.stepTitle}>1. Quels repas ?</Text>
-            <View style={styles.grid}>
-              <View style={styles.gridLabels}>
-                <View style={styles.gridHeadCell} />
-                <Text style={styles.gridMealLabel}>Midi</Text>
-                <Text style={styles.gridMealLabel}>Soir</Text>
-              </View>
-              {DAY_SHORT.map((d, day) => (
-                <View key={d} style={styles.gridCol}>
-                  <View style={styles.gridHeadCell}>
-                    <Text style={styles.gridDay}>{d}</Text>
-                    <Text style={styles.gridDate}>{formatDayShort(weekId, day).split(' ')[1]}</Text>
-                  </View>
-                  {MEALS.map((meal) => {
-                    const key = slotKey(day, meal);
-                    const on = slots.includes(key);
-                    return (
-                      <TouchableOpacity
-                        key={key}
-                        onPress={() => toggleSlot(key)}
-                        style={[styles.gridCell, on && styles.gridCellOn]}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: on }}
-                        accessibilityLabel={`${d} ${meal}`}
-                      >
-                        {on && <Ionicons name="checkmark" size={18} color="#fff" />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              ))}
-            </View>
+            <SlotGrid weekId={weekId} selected={slots} onToggle={toggleSlot} busy={busySlots} />
             <Text style={styles.hint}>
               {slots.length === 0
                 ? 'Touche les créneaux où ce plat sera mangé (on peut sauter des repas).'
@@ -298,15 +274,6 @@ const styles = StyleSheet.create({
   recipeOptionActive: { backgroundColor: COLORS.primary },
   recipeOptionText: { fontSize: 15, fontWeight: '700', color: COLORS.text },
 
-  grid: { flexDirection: 'row', gap: 5 },
-  gridLabels: { width: 38, gap: 5 },
-  gridCol: { flex: 1, gap: 5 },
-  gridHeadCell: { height: 34, alignItems: 'center', justifyContent: 'center' },
-  gridDay: { fontSize: 12, fontWeight: '800', color: COLORS.text },
-  gridDate: { fontSize: 11, fontWeight: '700', color: COLORS.textSecondary },
-  gridMealLabel: { height: 42, lineHeight: 42, fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  gridCell: { height: 42, borderRadius: 14, backgroundColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
-  gridCellOn: { backgroundColor: COLORS.primary },
 
   dayChips: { gap: SPACING.xs + 2, paddingVertical: 2 },
   dayChip: { backgroundColor: COLORS.sand, borderRadius: BORDER_RADIUS.full, paddingHorizontal: 12, paddingVertical: 9 },

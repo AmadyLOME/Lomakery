@@ -10,12 +10,22 @@ import {
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { MenuEntry, SavedMenu } from '../types';
+import { MenuEntry, SavedMenu, SlotKey } from '../types';
 import { addWeeks, sortSlots, weekIdOf } from '../utils/weeks';
 
 // households/{householdId}/weeks/{weekId} → { weekId, entries: MenuEntry[] }
 const weekDoc = (householdId: string, weekId: string) =>
   doc(db, 'households', householdId, 'weeks', weekId);
+
+export function normalize(entry: MenuEntry): MenuEntry {
+  return { ...entry, eaten: entry.eaten ?? [], skipped: entry.skipped ?? [] };
+}
+
+// Créneaux réellement prévus : ceux du plat, moins les repas sautés
+export function activeSlots(entry: MenuEntry): SlotKey[] {
+  const skipped = new Set((entry.skipped ?? []).map((s) => s.slot));
+  return sortSlots(entry.slots.filter((s) => !skipped.has(s)));
+}
 
 export function newEntryId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
@@ -44,7 +54,8 @@ export async function updateWeek(
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const current = snap.exists() ? ((snap.data().entries ?? []) as MenuEntry[]) : [];
-    const entries = change(current).map((e) => ({ ...e, slots: sortSlots(e.slots) }));
+    // Firestore refuse les champs `undefined` : on normalise chaque plat
+    const entries = change(current.map(normalize)).map((e) => ({ ...normalize(e), slots: sortSlots(e.slots) }));
     tx.set(ref, { weekId, entries });
   });
 }
@@ -64,6 +75,42 @@ export function removeEntry(householdId: string, weekId: string, entryId: string
 export function setCooked(householdId: string, weekId: string, entryId: string, cooked: boolean) {
   return updateWeek(householdId, weekId, (entries) =>
     entries.map((e) => (e.id === entryId ? { ...e, cooked, cookedAt: cooked ? Date.now() : null } : e))
+  );
+}
+
+export function setEaten(householdId: string, weekId: string, entryId: string, slot: SlotKey, eaten: boolean) {
+  return updateWeek(householdId, weekId, (entries) =>
+    entries.map((e) => {
+      if (e.id !== entryId) return e;
+      const rest = (e.eaten ?? []).filter((s) => s !== slot);
+      return { ...e, eaten: eaten ? [...rest, slot] : rest };
+    })
+  );
+}
+
+// Saute un repas ; s'il est reporté, le nouveau créneau s'ajoute au plat
+export function skipMeal(householdId: string, weekId: string, entryId: string, slot: SlotKey, to: SlotKey | null) {
+  return updateWeek(householdId, weekId, (entries) =>
+    entries.map((e) => {
+      if (e.id !== entryId) return e;
+      // Reporter sur un créneau déjà sauté le « ressuscite »
+      const skipped = [...(e.skipped ?? []).filter((s) => s.slot !== slot && s.slot !== to), { slot, to }];
+      const slots = to && !e.slots.includes(to) ? [...e.slots, to] : e.slots;
+      return { ...e, slots, skipped, eaten: (e.eaten ?? []).filter((s) => s !== slot) };
+    })
+  );
+}
+
+// Annule un « sauté » : le repas redevient prévu et son créneau de report est retiré
+export function unskipMeal(householdId: string, weekId: string, entryId: string, slot: SlotKey) {
+  return updateWeek(householdId, weekId, (entries) =>
+    entries.map((e) => {
+      if (e.id !== entryId) return e;
+      const record = (e.skipped ?? []).find((s) => s.slot === slot);
+      const skipped = (e.skipped ?? []).filter((s) => s.slot !== slot);
+      const dropTo = record?.to && !(e.eaten ?? []).includes(record.to) ? record.to : null;
+      return { ...e, skipped, slots: dropTo ? e.slots.filter((s) => s !== dropTo) : e.slots };
+    })
   );
 }
 
@@ -98,6 +145,8 @@ export async function migrateLegacyMenu(householdId: string) {
           cookMeal: 'soir' as const,
           cooked: false,
           cookedAt: null,
+          eaten: [],
+          skipped: [],
         })),
     ]);
   }
@@ -128,8 +177,8 @@ export async function saveMenu(householdId: string, name: string, entries: MenuE
   await addDoc(savedMenusCol(householdId), {
     name,
     entries: entries
-      .filter((e) => e.slots.length > 0)
-      .map(({ recipeId, slots, cookDay, cookMeal }) => ({ recipeId, slots, cookDay, cookMeal })),
+      .filter((e) => activeSlots(e).length > 0)
+      .map((e) => ({ recipeId: e.recipeId, slots: activeSlots(e), cookDay: e.cookDay, cookMeal: e.cookMeal })),
     createdBy: uid,
     createdAt: Date.now(),
   });
@@ -142,6 +191,6 @@ export function deleteSavedMenu(householdId: string, menuId: string) {
 // Remplace le menu de la semaine choisie ; les dates de cuisson sont relatives à son lundi
 export function applySavedMenu(householdId: string, weekId: string, menu: SavedMenu) {
   return updateWeek(householdId, weekId, () =>
-    menu.entries.map((e) => ({ ...e, id: newEntryId(), cooked: false, cookedAt: null }))
+    menu.entries.map((e) => ({ ...e, id: newEntryId(), cooked: false, cookedAt: null, eaten: [], skipped: [] }))
   );
 }
