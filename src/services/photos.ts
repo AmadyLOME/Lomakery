@@ -15,6 +15,7 @@ interface PickOptions {
 
 export const AVATAR_OPTIONS: PickOptions = { width: 256, aspect: [1, 1] };
 export const RECIPE_PHOTO_OPTIONS: PickOptions = { width: 900, aspect: [4, 3] };
+export const FAMILY_PHOTO_OPTIONS: PickOptions = { width: 700, aspect: [1, 1] };
 
 export function toDataUri(base64: string): string {
   return `data:image/jpeg;base64,${base64}`;

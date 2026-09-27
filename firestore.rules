@@ -140,6 +140,11 @@ service cloud.firestore {
       match /infos/{infoId} {
         allow read, write: if isMember(householdId);
       }
+
+      // Photos de famille (guirlande de l'Accueil, 5 max côté app)
+      match /familyPhotos/{photoId} {
+        allow read, write: if isMember(householdId);
+      }
     }
   }
 }

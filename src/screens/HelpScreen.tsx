@@ -31,6 +31,10 @@ const SECTIONS: Section[] = [
         answer: 'Touchez votre avatar (avec la petite roue ⚙︎) en haut à droite de l\'Accueil : vous y trouvez votre photo, le foyer et son code d\'invitation, l\'aide et la déconnexion.',
       },
       {
+        question: 'Photos de famille',
+        answer: 'La guirlande de polaroïds en haut de l\'Accueil montre jusqu\'à 5 photos du foyer (au-delà de 3, elles défilent). Touchez-la pour ajouter une photo, la remplacer, la retirer ou écrire sa légende. Les autres membres sont prévenus quand une photo est ajoutée. Les photos bougent doucement ; si « Réduire les animations » est activé dans les réglages d\'Accessibilité de l\'iPhone, elles restent immobiles.',
+      },
+      {
         question: 'Mots de la famille',
         answer: 'Un mur de petits mots partagé par le foyer : rappels, infos, messages. Touchez « Écrire un mot », puis la flèche pour l\'envoyer ; les autres membres reçoivent une notification et voient « … écrit un mot » pendant que vous écrivez. Touchez un mot pour l\'épingler en haut, le copier ou le supprimer (seul son auteur peut le supprimer).',
       },

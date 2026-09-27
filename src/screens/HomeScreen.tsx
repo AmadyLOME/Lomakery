@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, ScrollView, TouchableOpacity, StyleSheet, AccessibilityInfo } from 'react-native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from '../components/Text';
 import ScreenHeader from '../components/ScreenHeader';
 import Avatar from '../components/Avatar';
+import PolaroidGarland from '../components/PolaroidGarland';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToMembers } from '../services/members';
 import { subscribeToWeek, setCooked, setEaten, activeSlots } from '../services/weekPlan';
@@ -12,7 +13,8 @@ import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList } from '../services/lists';
 import { subscribeToNotes } from '../services/notes';
 import { subscribeToInfos } from '../services/infos';
-import { FamilyNote, InfoCard, Meal, MemberProfile, MenuEntry, Recipe, ShoppingItem } from '../types';
+import { subscribeToFamilyPhotos } from '../services/familyPhotos';
+import { FamilyNote, FamilyPhoto, InfoCard, Meal, MemberProfile, MenuEntry, Recipe, ShoppingItem } from '../types';
 import { slotKey, todayDayIndex, weekIdOf } from '../utils/weeks';
 import { cookStatus, mealState } from '../utils/menuDisplay';
 import { formatLongDate, formatRelative } from '../utils/time';
@@ -35,6 +37,16 @@ export default function HomeScreen() {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [notes, setNotes] = useState<FamilyNote[]>([]);
   const [infos, setInfos] = useState<InfoCard[]>([]);
+  const [photos, setPhotos] = useState<FamilyPhoto[]>([]);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const focused = useIsFocused();
+
+  // Respecte le réglage iOS « Réduire les animations »
+  useEffect(() => {
+    AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion).catch(() => {});
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     if (!householdId) return;
@@ -45,6 +57,7 @@ export default function HomeScreen() {
       subscribeToFamilyList(householdId, setItems),
       subscribeToNotes(householdId, setNotes),
       subscribeToInfos(householdId, setInfos),
+      subscribeToFamilyPhotos(householdId, setPhotos),
     ];
     return () => unsubs.forEach((u) => u());
   }, [householdId, weekId]);
@@ -149,6 +162,15 @@ export default function HomeScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Photos de famille : guirlande de polaroïds (pleine largeur) */}
+        <View style={styles.garland}>
+          <PolaroidGarland
+            photos={photos}
+            animate={focused && !reduceMotion}
+            onPress={() => navigation.navigate('Photos')}
+          />
+        </View>
+
         {/* Aujourd'hui */}
         <View style={styles.todayCard}>
           <View style={styles.rowBetween}>
@@ -291,6 +313,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.md - 4 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  garland: { marginHorizontal: -(SPACING.lg - 4), marginBottom: -SPACING.xs },
 
   avatars: { flexDirection: 'row', alignItems: 'center' },
   stacked: { marginLeft: -10, borderRadius: 999, borderWidth: 2, borderColor: COLORS.background },

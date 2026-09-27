@@ -16,6 +16,7 @@ import HelpScreen from '../screens/HelpScreen';
 import HomeScreen from '../screens/HomeScreen';
 import NotesScreen from '../screens/NotesScreen';
 import InfosScreen from '../screens/InfosScreen';
+import FamilyPhotosScreen from '../screens/FamilyPhotosScreen';
 import { COLORS, FONT_SIZE, FONTS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
@@ -38,6 +39,7 @@ function HomeNavigator() {
       <HomeStack.Screen name="HomeMain" component={HomeScreen} options={{ title: 'Accueil' }} />
       <HomeStack.Screen name="Notes" component={NotesScreen} />
       <HomeStack.Screen name="Infos" component={InfosScreen} />
+      <HomeStack.Screen name="Photos" component={FamilyPhotosScreen} />
       <HomeStack.Screen name="Profile" component={ProfileScreen} />
       <HomeStack.Screen name="Help" component={HelpScreen} options={{ headerShown: true, title: 'Aide' }} />
     </HomeStack.Navigator>

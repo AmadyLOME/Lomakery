@@ -148,3 +148,13 @@ export interface InfoCard {
   updatedByName: string;
   updatedAt: number;
 }
+
+// households/{id}/familyPhotos/{photoId} — photos de famille de la guirlande (5 max)
+export interface FamilyPhoto {
+  id: string;
+  data: string;          // JPEG base64
+  caption: string;
+  addedBy: string;
+  addedByName: string;
+  createdAt: number;
+}

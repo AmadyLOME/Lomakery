@@ -57,6 +57,7 @@ export const FONTS = {
   semibold: 'Nunito_600SemiBold',
   bold: 'Nunito_700Bold',
   extrabold: 'Nunito_800ExtraBold',
+  handwritten: 'Caveat_700Bold', // légendes des polaroïds
 };
 
 export function fontForWeight(weight?: string | number): string {
