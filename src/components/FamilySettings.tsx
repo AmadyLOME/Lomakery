@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
-  TextInput, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView,
-} from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Text, TextInput } from './Text';
 import { ShoppingItem, ShoppingGroup } from '../types';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
 interface Props {
@@ -149,7 +148,7 @@ export default function FamilySettings({
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE + 60 }}>
         {groups.map((group) => {
           const groupItems = items.filter((i) => i.groupId === group.id);
           const isCollapsed = collapsedGroups.has(group.id);
@@ -160,9 +159,11 @@ export default function FamilySettings({
                 onPress={() => toggleGroup(group.id)}
                 onLongPress={() => renameGroup(group)}
               >
-                <Text style={styles.groupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
+                <View style={styles.groupChevron}>
+                  <Ionicons name={isCollapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={COLORS.textSecondary} />
+                </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sectionHeader}>📦 {group.name}</Text>
+                  <Text style={styles.sectionHeader}>{group.name}</Text>
                   <Text style={styles.renameHint}>Appui long pour renommer</Text>
                 </View>
                 <Text style={styles.groupItemCount}>{groupItems.length}</Text>
@@ -346,35 +347,36 @@ export default function FamilySettings({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   section: {
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.md,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.md - 2,
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    ...SHADOWS.soft,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 4,
-    backgroundColor: COLORS.surfaceWarm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.sm + 6,
   },
-  sectionHeader: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
-  renameHint: { fontSize: moderateScale(10), color: COLORS.border, marginTop: 1 },
-  groupChevron: { fontSize: 11, color: COLORS.textSecondary, marginRight: SPACING.xs },
+  sectionHeader: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  renameHint: { fontSize: moderateScale(11), color: COLORS.textSecondary, marginTop: 1 },
+  groupChevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
   groupItemCount: {
     fontSize: FONT_SIZE.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-    backgroundColor: COLORS.border,
+    color: COLORS.textMuted,
+    fontWeight: '700',
+    backgroundColor: COLORS.sand,
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: 7,
     paddingVertical: 1,
@@ -383,12 +385,12 @@ const styles = StyleSheet.create({
   },
   sectionActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   addItemBtn: {
-    backgroundColor: COLORS.mustard,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.md - 4,
+    paddingVertical: SPACING.xs + 2,
     borderRadius: BORDER_RADIUS.full,
   },
-  addItemBtnText: { color: '#fff', fontSize: FONT_SIZE.sm, fontWeight: '600' },
+  addItemBtnText: { color: '#fff', fontSize: FONT_SIZE.sm, fontWeight: '800' },
   deleteGroupBtn: { color: COLORS.textSecondary, fontSize: FONT_SIZE.lg, paddingLeft: SPACING.xs },
   emptyGroup: {
     fontSize: FONT_SIZE.sm,
@@ -402,12 +404,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.sm + 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.sand,
   },
-  itemName: { fontSize: FONT_SIZE.lg, color: COLORS.text },
+  itemName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
   itemMeta: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
   editHint: { fontSize: FONT_SIZE.md, marginRight: SPACING.sm },
   deleteBtnWrap: { paddingLeft: SPACING.sm },
@@ -417,19 +419,19 @@ const styles = StyleSheet.create({
   emptySubtext: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary },
   fab: {
     position: 'absolute',
-    bottom: 24,
+    bottom: TAB_BAR_SPACE - 8,
     right: 24,
-    width: scale(56),
-    height: scale(56),
-    borderRadius: 28,
+    width: scale(58),
+    height: scale(58),
+    borderRadius: scale(29),
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
   },
   fabText: { color: '#fff', fontSize: moderateScale(28), fontWeight: '300', lineHeight: moderateScale(32) },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
@@ -465,10 +467,10 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   row: { flexDirection: 'row' },
-  button: { flex: 1, paddingVertical: SPACING.md, borderRadius: BORDER_RADIUS.sm, alignItems: 'center' },
+  button: { flex: 1, paddingVertical: SPACING.md, borderRadius: BORDER_RADIUS.full, alignItems: 'center' },
   cancelButton: { backgroundColor: COLORS.background, marginRight: SPACING.sm, borderWidth: 1, borderColor: COLORS.border },
   addButton: { backgroundColor: COLORS.green },
-  cancelButtonText: { color: COLORS.text, fontSize: FONT_SIZE.lg },
-  addButtonText: { color: '#fff', fontSize: FONT_SIZE.lg, fontWeight: '600' },
+  cancelButtonText: { color: COLORS.text, fontSize: FONT_SIZE.lg, fontWeight: '700' },
+  addButtonText: { color: '#fff', fontSize: FONT_SIZE.lg, fontWeight: '800' },
   hint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginBottom: SPACING.md, fontStyle: 'italic' },
 });

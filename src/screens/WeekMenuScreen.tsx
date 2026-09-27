@@ -1,13 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Modal,
-  Alert,
-} from 'react-native';
+import { View, TouchableOpacity, StyleSheet, ScrollView, Modal, Alert } from 'react-native';
+import { Text } from '../components/Text';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToWeekMenu, addToWeekMenu, removeFromWeekMenu, resetWeekMenu } from '../services/weekMenu';
@@ -15,7 +8,9 @@ import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, ShoppingItem, ShoppingGroup } from '../types';
 import { notify, senderName } from '../services/notifications';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
+import ScreenHeader from '../components/ScreenHeader';
+import RoundButton from '../components/RoundButton';
 import { scale, moderateScale } from '../utils/responsive';
 
 export default function WeekMenuScreen() {
@@ -100,20 +95,18 @@ export default function WeekMenuScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Plat de la semaine</Text>
-        <TouchableOpacity style={styles.resetBtn} onPress={handleReset}>
-          <Text style={styles.resetBtnText}>🔄 Refaire</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        subtitle="Plats de la semaine"
+        title="Menu"
+        right={<RoundButton icon="refresh" label="Refaire le menu" onPress={handleReset} />}
+      />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
 
         {/* ── Plats sélectionnés ───────────────────────── */}
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>🍽 Plats sélectionnés</Text>
+            <Text style={styles.sectionTitle}>Plats sélectionnés</Text>
             <TouchableOpacity style={styles.addBtn} onPress={() => setShowPicker(true)}>
               <Text style={styles.addBtnText}>+ Ajouter</Text>
             </TouchableOpacity>
@@ -158,7 +151,7 @@ export default function WeekMenuScreen() {
         {/* ── Articles à acheter ───────────────────────── */}
         {menuIds.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🛒 Articles à acheter</Text>
+            <Text style={styles.sectionTitle}>Articles à acheter</Text>
 
             {allReady ? (
               <View style={styles.allReadyBox}>
@@ -260,54 +253,30 @@ export default function WeekMenuScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
-  resetBtn: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
-  },
-  resetBtnText: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.textSecondary },
 
   section: {
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.md,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.md - 2,
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 24,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...SHADOWS.soft,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surfaceWarm,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.md - 2,
   },
-  sectionTitle: { fontSize: FONT_SIZE.md, fontWeight: '700', color: COLORS.text },
+  sectionTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
   addBtn: {
     backgroundColor: COLORS.primary,
     borderRadius: BORDER_RADIUS.full,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
+    paddingVertical: SPACING.sm,
   },
-  addBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT_SIZE.sm },
+  addBtnText: { color: '#fff', fontWeight: '800', fontSize: FONT_SIZE.md },
 
   emptyText: {
     fontSize: FONT_SIZE.md,

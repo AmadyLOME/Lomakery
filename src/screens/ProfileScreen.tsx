@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View, Text, StyleSheet, TouchableOpacity, Share, Alert, ScrollView, ActivityIndicator,
-} from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Share, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { Text } from '../components/Text';
 import * as Clipboard from 'expo-clipboard';
+import { Ionicons } from '@expo/vector-icons';
+import ScreenHeader from '../components/ScreenHeader';
+import RoundButton from '../components/RoundButton';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { logout } from '../services/auth';
@@ -11,7 +13,7 @@ import { subscribeToMembers, setMemberPhoto } from '../services/members';
 import { pickPhoto, askPhotoSource, AVATAR_OPTIONS, PhotoSource } from '../services/photos';
 import Avatar from '../components/Avatar';
 import { Household, MemberProfile } from '../types';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
 export default function ProfileScreen() {
@@ -72,149 +74,149 @@ export default function ProfileScreen() {
     Alert.alert('Copié !', `Le code ${household.inviteCode} a été copié dans le presse-papiers.`);
   }
 
+  const confirmLogout = () =>
+    Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Se déconnecter', style: 'destructive', onPress: logout },
+    ]);
+
+  const everyone = household ? [me ?? { uid: user?.uid ?? '', displayName: user?.displayName ?? '' }, ...otherMembers] : [];
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.card}>
-        <TouchableOpacity onPress={changePhoto} style={styles.avatarWrap} activeOpacity={0.8}>
-          <Avatar name={user?.displayName ?? undefined} photo={me?.photo} size={scale(88)} />
-          <View style={styles.avatarBadge}>
-            {photoBusy ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.avatarBadgeText}>📷</Text>}
+    <View style={styles.container}>
+      <ScreenHeader title="Profil" />
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Moi */}
+        <View style={[styles.card, styles.meCard]}>
+          <TouchableOpacity
+            onPress={changePhoto}
+            accessibilityRole="button"
+            accessibilityLabel="Changer la photo de profil"
+          >
+            <Avatar name={user?.displayName ?? undefined} photo={me?.photo} size={scale(76)} />
+            <View style={styles.avatarBadge}>
+              {photoBusy ? <ActivityIndicator size="small" color="#fff" /> : <Ionicons name="camera" size={15} color="#fff" />}
+            </View>
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.name} numberOfLines={1}>{user?.displayName}</Text>
+            <Text style={styles.email} numberOfLines={1}>{user?.email}</Text>
           </View>
-        </TouchableOpacity>
-        <Text style={styles.name}>{user?.displayName}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-      </View>
+        </View>
 
-      {household && (
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Mon foyer</Text>
-          <Text style={styles.householdName}>{household.name}</Text>
-          <Text style={styles.memberCount}>
-            {household.members.length} membre{household.members.length > 1 ? 's' : ''}
-          </Text>
-
-          {otherMembers.length > 0 && (
-            <View style={styles.membersList}>
-              {otherMembers.map((m) => (
-                <View key={m.uid} style={styles.memberRow}>
-                  <Avatar name={m.displayName} photo={m.photo} size={scale(40)} />
-                  <Text style={styles.memberName}>{m.displayName}</Text>
-                </View>
-              ))}
+        {/* Foyer */}
+        {household && (
+          <View style={[styles.card, { gap: SPACING.md - 2 }]}>
+            <View style={styles.householdRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>MON FOYER</Text>
+                <Text style={styles.householdName}>{household.name}</Text>
+                <Text style={styles.memberCount}>
+                  {household.members.length} membre{household.members.length > 1 ? 's' : ''}
+                </Text>
+              </View>
+              <View style={styles.avatarStack}>
+                {everyone.map((m, idx) => (
+                  <View key={m.uid} style={[styles.stackedAvatar, idx > 0 && { marginLeft: -12 }]}>
+                    <Avatar name={m.displayName} photo={m.photo} size={scale(38)} />
+                  </View>
+                ))}
+              </View>
             </View>
-          )}
 
-          <TouchableOpacity style={styles.inviteRow} onPress={shareInviteCode} onLongPress={copyInviteCode}>
-            <View>
-              <Text style={styles.inviteLabel}>Code d'invitation</Text>
-              <Text style={styles.inviteCode}>{household.inviteCode}</Text>
-              <Text style={styles.inviteHint}>Appui long pour copier</Text>
+            {otherMembers.length > 0 && (
+              <View style={styles.membersList}>
+                {otherMembers.map((m) => (
+                  <View key={m.uid} style={styles.memberRow}>
+                    <Avatar name={m.displayName} photo={m.photo} size={scale(34)} />
+                    <Text style={styles.memberName}>{m.displayName}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.invitePill}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.inviteLabel}>Code d'invitation</Text>
+                <Text style={styles.inviteCode}>{household.inviteCode}</Text>
+              </View>
+              <RoundButton icon="copy-outline" label="Copier le code" onPress={copyInviteCode} />
+              <RoundButton icon="share-outline" variant="primary" label="Partager le code" onPress={shareInviteCode} />
             </View>
-            <Text style={styles.shareIcon}>↗</Text>
+          </View>
+        )}
+
+        {/* Réglages */}
+        <View style={[styles.card, styles.listCard]}>
+          <TouchableOpacity style={styles.listRow} onPress={() => navigation.navigate('Help')} accessibilityRole="button">
+            <View style={[styles.listIcon, { backgroundColor: COLORS.sand }]}>
+              <Ionicons name="help-circle-outline" size={20} color={COLORS.mustardText} />
+            </View>
+            <Text style={styles.listText}>Aide &amp; guide</Text>
+            <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+          </TouchableOpacity>
+          <View style={styles.listDivider} />
+          <TouchableOpacity style={styles.listRow} onPress={confirmLogout} accessibilityRole="button">
+            <View style={[styles.listIcon, { backgroundColor: COLORS.dangerSoft }]}>
+              <Ionicons name="log-out-outline" size={20} color={COLORS.dangerText} />
+            </View>
+            <Text style={[styles.listText, { color: COLORS.dangerText }]}>Se déconnecter</Text>
           </TouchableOpacity>
         </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.helpBtn}
-        onPress={() => navigation.navigate('Help')}
-      >
-        <Text style={styles.helpText}>💡  Aide & Guide</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.logoutBtn}
-        onPress={() =>
-          Alert.alert('Déconnexion', 'Êtes-vous sûr ?', [
-            { text: 'Annuler', style: 'cancel' },
-            { text: 'Se déconnecter', style: 'destructive', onPress: logout },
-          ])
-        }
-      >
-        <Text style={styles.logoutText}>Se déconnecter</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: SPACING.md },
+  content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.md - 2 },
   card: {
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg - 2,
+    ...SHADOWS.soft,
   },
-  avatarWrap: { marginBottom: SPACING.sm },
+  meCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md },
   avatarBadge: {
     position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: scale(30),
-    height: scale(30),
-    borderRadius: scale(15),
+    right: -4,
+    bottom: -4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: COLORS.surface,
   },
-  avatarBadgeText: { fontSize: moderateScale(14) },
-  membersList: { alignSelf: 'stretch', marginBottom: SPACING.md, gap: SPACING.sm },
-  memberRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  memberName: { fontSize: FONT_SIZE.lg, color: COLORS.text, fontWeight: '600' },
-  name: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
-  email: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: 2 },
-  sectionTitle: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    color: COLORS.mustard,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    alignSelf: 'flex-start',
-    marginBottom: SPACING.sm,
-  },
-  householdName: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
-  memberCount: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginBottom: SPACING.md },
-  inviteRow: {
+  name: { fontSize: moderateScale(22), fontWeight: '800', color: COLORS.text },
+  email: { fontSize: FONT_SIZE.md, color: COLORS.textMuted, marginTop: 2 },
+  householdRow: { flexDirection: 'row', alignItems: 'center' },
+  sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.mustardText, letterSpacing: 1 },
+  householdName: { fontSize: moderateScale(20), fontWeight: '800', color: COLORS.text },
+  memberCount: { fontSize: FONT_SIZE.md, color: COLORS.textMuted },
+  avatarStack: { flexDirection: 'row' },
+  stackedAvatar: { borderRadius: 999, borderWidth: 3, borderColor: COLORS.surface },
+  membersList: { gap: SPACING.sm },
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2 },
+  memberName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
+  invitePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    alignSelf: 'stretch',
+    gap: SPACING.sm,
     backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.full,
+    paddingVertical: SPACING.sm,
+    paddingLeft: SPACING.lg - 4,
+    paddingRight: SPACING.sm,
   },
-  inviteLabel: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
-  inviteCode: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.primary, letterSpacing: 4 },
-  inviteHint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2, fontStyle: 'italic' },
-  shareIcon: { fontSize: 22, color: COLORS.primary },
-  logoutBtn: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.md,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: COLORS.danger,
-  },
-  helpBtn: {
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.sm,
-    padding: SPACING.md,
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.mustard,
-  },
-  helpText: { color: COLORS.mustard, fontSize: FONT_SIZE.lg, fontWeight: '600' },
-  logoutText: { color: COLORS.danger, fontSize: FONT_SIZE.lg, fontWeight: '600' },
+  inviteLabel: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.textMuted },
+  inviteCode: { fontSize: moderateScale(20), fontWeight: '800', color: COLORS.primary, letterSpacing: 4 },
+  listCard: { padding: 0, overflow: 'hidden' },
+  listRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md - 2, paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg - 4 },
+  listIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  listText: { flex: 1, fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
+  listDivider: { height: 1, backgroundColor: COLORS.sand, marginLeft: 72 },
 });

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import ScreenHeader from '../components/ScreenHeader';
+import RoundButton from '../components/RoundButton';
+import { getHousehold } from '../services/household';
 import { useAuth } from '../hooks/useAuth';
 import {
   subscribeToFamilyList,
@@ -19,7 +22,7 @@ import { ShoppingItem, ShoppingGroup } from '../types';
 import { notify, senderName } from '../services/notifications';
 import FamilySettings from '../components/FamilySettings';
 import FamilyShoppingView from '../components/FamilyShoppingView';
-import { COLORS, SPACING, FONT_SIZE } from '../constants/theme';
+import { COLORS } from '../constants/theme';
 
 type Tab = 'liste' | 'parametrage';
 
@@ -28,6 +31,7 @@ export default function FamilyListScreen({ route }: any) {
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [groups, setGroups] = useState<ShoppingGroup[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>(route?.params?.initialTab ?? 'liste');
+  const [householdName, setHouseholdName] = useState<string | null>(null);
 
   const householdId: string = profile?.householdId ?? '';
   const collectionPath = `households/${householdId}/familyList`;
@@ -36,8 +40,14 @@ export default function FamilyListScreen({ route }: any) {
     if (!householdId) return;
     const unsubItems = subscribeToFamilyList(householdId, setItems);
     const unsubGroups = subscribeToFamilyGroups(householdId, setGroups);
+    getHousehold(householdId).then((h) => setHouseholdName(h?.name ?? null)).catch(() => {});
     return () => { unsubItems(); unsubGroups(); };
   }, [householdId]);
+
+  // Ouverture depuis une recette (« Aller au Paramétrage »)
+  useEffect(() => {
+    if (route?.params?.initialTab) setActiveTab(route.params.initialTab);
+  }, [route?.params?.initialTab]);
 
   if (!user || !householdId) return null;
 
@@ -67,27 +77,18 @@ export default function FamilyListScreen({ route }: any) {
 
   return (
     <View style={styles.container}>
-      {/* Onglets */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'liste' && styles.tabActive]}
-          onPress={() => setActiveTab('liste')}
-        >
-          <Text style={[styles.tabText, activeTab === 'liste' && styles.tabTextActive]}>
-            🛒 Liste
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'parametrage' && styles.tabActive]}
-          onPress={() => setActiveTab('parametrage')}
-        >
-          <Text style={[styles.tabText, activeTab === 'parametrage' && styles.tabTextActive]}>
-            ⚙️ Paramétrer
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        subtitle={householdName ?? undefined}
+        title={activeTab === 'liste' ? 'Courses' : 'Paramétrage'}
+        right={
+          activeTab === 'liste' ? (
+            <RoundButton icon="options-outline" label="Paramétrer la liste" onPress={() => setActiveTab('parametrage')} />
+          ) : (
+            <RoundButton icon="checkmark" variant="primary" label="Terminer le paramétrage" onPress={() => setActiveTab('liste')} />
+          )
+        }
+      />
 
-      {/* Contenu */}
       {activeTab === 'liste' ? (
         <FamilyShoppingView
           items={items}
@@ -116,23 +117,4 @@ export default function FamilyListScreen({ route }: any) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
-  tabs: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xs,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    alignItems: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
-    marginHorizontal: SPACING.xs,
-  },
-  tabActive: { borderBottomColor: COLORS.primary },
-  tabText: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, fontWeight: '500' },
-  tabTextActive: { color: COLORS.primary, fontWeight: '700' },
 });

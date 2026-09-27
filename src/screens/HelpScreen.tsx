@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
-} from 'react-native';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text } from '../components/Text';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, TAB_BAR_SPACE } from '../constants/theme';
 import { moderateScale } from '../utils/responsive';
 
 interface Section {
@@ -171,7 +170,7 @@ export default function HelpScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
       <View style={styles.hero}>
         <Text style={styles.heroEmoji}>💡</Text>
         <Text style={styles.heroTitle}>Comment utiliser TeninGrocery</Text>

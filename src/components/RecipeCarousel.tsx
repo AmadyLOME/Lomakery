@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  useWindowDimensions,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-} from 'react-native';
+import { View, Image, FlatList, TouchableOpacity, StyleSheet, useWindowDimensions, NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Text } from './Text';
 import { Recipe } from '../types';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { moderateScale } from '../utils/responsive';
 
 interface RecipeStats {
@@ -104,8 +96,13 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
             <Text style={styles.placeholderHint}>Ouvre la recette pour ajouter une photo</Text>
           </View>
         )}
-        <TouchableOpacity style={styles.deleteBtn} onPress={onDelete} hitSlop={8}>
-          <Text style={styles.deleteBtnText}>🗑</Text>
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={`Supprimer ${recipe.name}`}
+        >
+          <Ionicons name="trash-outline" size={18} color={COLORS.dangerText} />
         </TouchableOpacity>
       </View>
 
@@ -134,43 +131,45 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, paddingBottom: TAB_BAR_SPACE - 20 },
   card: {
     backgroundColor: COLORS.surface,
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
-    ...SHADOWS.md,
+    ...SHADOWS.soft,
   },
-  photoBox: { aspectRatio: 4 / 3, backgroundColor: COLORS.surfaceWarm },
+  photoBox: { aspectRatio: 4 / 3, backgroundColor: COLORS.sand },
   photo: { width: '100%', height: '100%' },
   photoPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.md },
   placeholderEmoji: { fontSize: moderateScale(56) },
   placeholderHint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: SPACING.xs, textAlign: 'center' },
   deleteBtn: {
     position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderRadius: BORDER_RADIUS.full,
-    padding: SPACING.xs + 2,
+    top: SPACING.md - 4,
+    right: SPACING.md - 4,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  deleteBtnText: { fontSize: 16 },
   body: { padding: SPACING.md },
-  name: { fontSize: FONT_SIZE.xxl, fontWeight: '700', color: COLORS.text },
+  name: { fontSize: FONT_SIZE.xxl, fontWeight: '800', color: COLORS.text },
   desc: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary, marginTop: SPACING.xs, lineHeight: 20 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.xs, marginTop: SPACING.sm },
   badge: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '800',
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.full,
     overflow: 'hidden',
   },
-  badgeGreen: { backgroundColor: COLORS.green + '22', color: COLORS.green },
-  badgeRed: { backgroundColor: COLORS.danger + '22', color: COLORS.danger },
-  badgeNeutral: { backgroundColor: COLORS.border, color: COLORS.textSecondary },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6, paddingBottom: SPACING.lg },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.border },
-  dotActive: { backgroundColor: COLORS.primary, width: 18 },
+  badgeGreen: { backgroundColor: COLORS.greenSoft, color: COLORS.green },
+  badgeRed: { backgroundColor: COLORS.dangerSoft, color: COLORS.dangerText },
+  badgeNeutral: { backgroundColor: COLORS.sand, color: COLORS.textMuted },
+  dots: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.sandDark },
+  dotActive: { backgroundColor: COLORS.primary, width: 20 },
 });

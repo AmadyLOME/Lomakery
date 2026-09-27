@@ -1,9 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, TextInput,
-} from 'react-native';
+import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Text, TextInput } from './Text';
+import Segmented from './Segmented';
 import { ShoppingItem, ShoppingGroup } from '../types';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
 interface Props {
@@ -75,40 +76,48 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
     return (
       <View key={item.id} style={styles.itemRow}>
         <TouchableOpacity
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: item.checked }}
+          accessibilityLabel={item.checked ? `${item.name} : remettre à acheter` : `${item.name} : marquer à la casa`}
+          hitSlop={8}
           style={[styles.checkbox, item.checked && styles.checkboxChecked]}
           onPress={() => handleCheckboxPress(item)}
         >
-          {item.checked && <Text style={styles.checkmark}>✓</Text>}
+          {item.checked && <Ionicons name="checkmark" size={moderateScale(17)} color="#fff" />}
         </TouchableOpacity>
 
         <View style={{ flex: 1 }}>
-          <Text style={[styles.itemName, item.checked && styles.itemNameChecked]}>
-            {item.name}
-          </Text>
+          <Text style={styles.itemName}>{item.name}</Text>
           {hasStock && (
-            <Text style={[styles.stockInfo, isLow && styles.stockLow]}>
-              Stock : {item.stock}{item.unit ? ' ' + item.unit : ''}
-              {' '}· seuil : {item.threshold}
-              {isLow ? '  ⚠️' : ''}
-            </Text>
+            <View style={[styles.stockChip, isLow && styles.stockChipLow]}>
+              <Text style={[styles.stockChipText, isLow && styles.stockChipTextLow]}>
+                Stock {item.stock}{item.unit ? ' ' + item.unit : ''} · seuil {item.threshold}
+              </Text>
+            </View>
           )}
         </View>
 
         {item.checked && hasStock ? (
           <View style={styles.stockControls}>
-            <TouchableOpacity style={styles.stockBtn} onPress={() => onDecrement(item)}>
-              <Text style={styles.stockBtnText}>−</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Retirer un ${item.name}`}
+              style={styles.stockBtn}
+              onPress={() => onDecrement(item)}
+            >
+              <Ionicons name="remove" size={18} color={COLORS.text} />
             </TouchableOpacity>
             <Text style={styles.stockValue}>{item.stock}</Text>
-            <TouchableOpacity style={styles.stockBtn} onPress={() => onIncrement(item)}>
-              <Text style={styles.stockBtnText}>+</Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`Ajouter un ${item.name}`}
+              style={styles.stockBtn}
+              onPress={() => onIncrement(item)}
+            >
+              <Ionicons name="add" size={18} color={COLORS.text} />
             </TouchableOpacity>
           </View>
-        ) : (
-          <Text style={styles.moveHint}>
-            {item.checked ? '→ À acheter' : '→ Dispo'}
-          </Text>
-        )}
+        ) : null}
       </View>
     );
   }
@@ -117,10 +126,19 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
     const isCollapsed = collapsedGroups.has(groupId);
     return (
       <View key={groupId} style={styles.card}>
-        <TouchableOpacity style={styles.groupHeader} onPress={() => toggleGroup(groupId)}>
+        <TouchableOpacity
+          style={styles.groupHeader}
+          onPress={() => toggleGroup(groupId)}
+          accessibilityRole="button"
+          accessibilityLabel={`${label}, ${groupItems.length} articles, ${isCollapsed ? 'déplier' : 'replier'}`}
+        >
           <Text style={styles.groupName}>{label}</Text>
-          <Text style={styles.groupChevron}>{isCollapsed ? '▶' : '▼'}</Text>
-          <Text style={styles.groupCount}>{groupItems.length}</Text>
+          <View style={styles.groupCount}>
+            <Text style={styles.groupCountText}>{groupItems.length}</Text>
+          </View>
+          <View style={styles.groupChevron}>
+            <Ionicons name={isCollapsed ? 'chevron-forward' : 'chevron-down'} size={16} color={COLORS.textSecondary} />
+          </View>
         </TouchableOpacity>
         {!isCollapsed && groupItems.map(renderItem)}
       </View>
@@ -129,43 +147,22 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
 
   return (
     <View style={styles.container}>
-      {/* Toggle À acheter / À la casa */}
+      {/* Sélecteur À acheter / À la casa */}
       <View style={styles.toggleRow}>
-        <TouchableOpacity
-          style={[styles.toggleBtn, activeView === 'acheter' && styles.toggleBtnActive]}
-          onPress={() => { setActiveView('acheter'); setSearch(''); }}
-        >
-          <Text style={[styles.toggleText, activeView === 'acheter' && styles.toggleTextActive]}>
-            🛒 À acheter
-          </Text>
-          {aAcheter.length > 0 && (
-            <View style={[styles.badge, activeView === 'acheter' ? styles.badgeActive : styles.badgeInactive]}>
-              <Text style={[styles.badgeText, activeView === 'acheter' && styles.badgeTextActive]}>
-                {aAcheter.length}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.toggleBtn, activeView === 'dispo' && styles.toggleBtnDispoActive]}
-          onPress={() => { setActiveView('dispo'); setSearch(''); }}
-        >
-          <Text style={[styles.toggleText, activeView === 'dispo' && styles.toggleTextDispoActive]}>
-            🏠 À la casa
-          </Text>
-          {disponible.length > 0 && (
-            <View style={[styles.badge, activeView === 'dispo' ? styles.badgeDispoActive : styles.badgeInactive]}>
-              <Text style={[styles.badgeText, activeView === 'dispo' && styles.badgeTextActive]}>
-                {disponible.length}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <Segmented
+          stretch
+          value={activeView}
+          onChange={(v) => { setActiveView(v); setSearch(''); }}
+          options={[
+            { value: 'acheter', label: 'À acheter', count: aAcheter.length, activeColor: COLORS.primary },
+            { value: 'dispo', label: 'À la casa', count: disponible.length, activeColor: COLORS.green },
+          ]}
+        />
       </View>
 
       {/* Barre de recherche */}
-      <View style={styles.searchRow}>
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={18} color={COLORS.textSecondary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher un article…"
@@ -176,7 +173,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyEmoji}>
@@ -191,7 +188,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
         ) : (
           <>
             {grouped.map(({ group, groupItems }) =>
-              renderGroup(group.id, `📦 ${group.name}`, groupItems)
+              renderGroup(group.id, group.name, groupItems)
             )}
             {ungrouped.length > 0 && renderGroup('__ungrouped', 'Autres', ungrouped)}
           </>
@@ -204,141 +201,90 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  toggleRow: {
-    flexDirection: 'row',
-    margin: SPACING.md,
-    marginBottom: SPACING.sm,
-    backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    padding: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  toggleBtn: {
-    flex: 1,
+  toggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.sm + 4 },
+
+  searchBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: BORDER_RADIUS.sm,
-    gap: SPACING.xs,
-  },
-  toggleBtnActive: { backgroundColor: COLORS.primary },
-  toggleBtnDispoActive: { backgroundColor: COLORS.green },
-  toggleText: { fontSize: FONT_SIZE.md, fontWeight: '600', color: COLORS.textSecondary },
-  toggleTextActive: { color: '#fff' },
-  toggleTextDispoActive: { color: '#fff' },
-
-  badge: {
-    minWidth: 20,
-    height: scale(20),
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 5,
-  },
-  badgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-  badgeDispoActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
-  badgeInactive: { backgroundColor: COLORS.border },
-  badgeText: { fontSize: moderateScale(11), fontWeight: '700', color: COLORS.textSecondary },
-  badgeTextActive: { color: '#fff' },
-
-  searchRow: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  searchInput: {
+    gap: SPACING.sm + 2,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.md + 2,
+    minHeight: 46,
     backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    fontSize: FONT_SIZE.md,
-    color: COLORS.text,
+    ...SHADOWS.soft,
   },
+  searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: SPACING.sm + 2 },
 
   card: {
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.md - 2,
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 24,
+    paddingVertical: SPACING.xs + 2,
+    ...SHADOWS.soft,
   },
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surfaceWarm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md + 2,
+    paddingTop: SPACING.sm + 2,
+    paddingBottom: SPACING.xs + 2,
   },
-  groupName: {
-    flex: 1,
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    color: COLORS.mustard,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  groupChevron: { fontSize: moderateScale(11), color: COLORS.textSecondary, marginRight: SPACING.xs },
-  groupCount: {
-    fontSize: FONT_SIZE.sm,
-    fontWeight: '700',
-    color: COLORS.textSecondary,
-    backgroundColor: COLORS.border,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: 7,
-    paddingVertical: 1,
-    overflow: 'hidden',
+  groupName: { flex: 1, fontSize: 16, fontWeight: '800', color: COLORS.text },
+  groupCount: { backgroundColor: COLORS.sand, borderRadius: BORDER_RADIUS.full, paddingHorizontal: 10, paddingVertical: 2 },
+  groupCountText: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
+  groupChevron: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 4,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    gap: SPACING.md - 2,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.sm + 2,
   },
   checkbox: {
-    width: scale(24),
-    height: scale(24),
-    borderRadius: 12,
-    borderWidth: 2,
+    width: scale(28),
+    height: scale(28),
+    borderRadius: scale(14),
+    borderWidth: 2.5,
     borderColor: COLORS.primary,
-    marginRight: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: { backgroundColor: COLORS.green, borderColor: COLORS.green },
-  checkmark: { color: '#fff', fontSize: moderateScale(13), fontWeight: '700' },
-  itemName: { fontSize: FONT_SIZE.lg, color: COLORS.text },
-  itemNameChecked: { color: COLORS.textSecondary },
-  stockInfo: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
-  stockLow: { color: COLORS.danger, fontWeight: '600' },
-  moveHint: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginLeft: SPACING.xs },
+  itemName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
+  stockChip: {
+    alignSelf: 'flex-start',
+    marginTop: 3,
+    backgroundColor: COLORS.sand,
+    borderRadius: BORDER_RADIUS.full,
+    paddingHorizontal: 9,
+    paddingVertical: 1,
+  },
+  stockChipLow: { backgroundColor: COLORS.dangerSoft },
+  stockChipText: { fontSize: FONT_SIZE.sm, fontWeight: '700', color: COLORS.textMuted },
+  stockChipTextLow: { color: COLORS.dangerText },
   stockControls: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
   stockBtn: {
-    width: scale(30),
-    height: scale(30),
-    borderRadius: 15,
-    backgroundColor: COLORS.mustard,
+    width: scale(34),
+    height: scale(34),
+    borderRadius: scale(17),
+    backgroundColor: COLORS.sand,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stockBtnText: { color: '#fff', fontSize: moderateScale(18), fontWeight: '700', lineHeight: moderateScale(22) },
-  stockValue: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text, minWidth: 28, textAlign: 'center' },
+  stockValue: { fontSize: FONT_SIZE.lg, fontWeight: '800', color: COLORS.text, minWidth: 28, textAlign: 'center' },
   empty: { alignItems: 'center', marginTop: 60 },
   emptyEmoji: { fontSize: moderateScale(48), marginBottom: SPACING.md },
-  emptyText: { fontSize: FONT_SIZE.lg, color: COLORS.textSecondary, textAlign: 'center' },
+  emptyText: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.textSecondary, textAlign: 'center' },
 });

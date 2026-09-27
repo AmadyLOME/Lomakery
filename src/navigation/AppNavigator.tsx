@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import FloatingTabBar from '../components/FloatingTabBar';
 import { useAuth } from '../hooks/useAuth';
 import { registerForPushNotifications } from '../services/notifications';
 import { ensureMemberProfile } from '../services/members';
@@ -13,7 +13,7 @@ import RecipesScreen from '../screens/RecipesScreen';
 import WeekMenuScreen from '../screens/WeekMenuScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import HelpScreen from '../screens/HelpScreen';
-import { COLORS, FONT_SIZE } from '../constants/theme';
+import { COLORS, FONT_SIZE, FONTS } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -24,12 +24,13 @@ function ProfileNavigator() {
     <ProfileStack.Navigator
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.background },
-        headerTitleStyle: { fontWeight: '700', color: COLORS.text, fontSize: FONT_SIZE.xl },
+        headerTitleStyle: { fontFamily: FONTS.extrabold, color: COLORS.text, fontSize: FONT_SIZE.xl },
         headerShadowVisible: false,
         headerTintColor: COLORS.primary,
+        headerBackTitleStyle: { fontFamily: FONTS.semibold },
       }}
     >
-      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ title: 'Mon Profil' }} />
+      <ProfileStack.Screen name="ProfileMain" component={ProfileScreen} options={{ headerShown: false, title: 'Profil' }} />
       <ProfileStack.Screen name="Help" component={HelpScreen} options={{ title: 'Aide' }} />
     </ProfileStack.Navigator>
   );
@@ -38,67 +39,13 @@ function ProfileNavigator() {
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
-        tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
-          borderTopWidth: 1,
-          height: 58,
-          paddingBottom: 6,
-          paddingTop: 4,
-        },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
-        headerStyle: { backgroundColor: COLORS.background },
-        headerTitleStyle: { fontWeight: '700', color: COLORS.text, fontSize: FONT_SIZE.xl },
-        headerShadowVisible: false,
-      }}
+      tabBar={(props) => <FloatingTabBar {...props} />}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: COLORS.background } }}
     >
-      <Tab.Screen
-        name="FamilyList"
-        component={FamilyListScreen}
-        options={{
-          title: 'TeninGrocery',
-          tabBarLabel: 'Courses',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: focused ? 24 : 20 }}>🛒</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Recipes"
-        component={RecipesScreen}
-        options={{
-          title: 'Recettes',
-          tabBarLabel: 'Recettes',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: focused ? 24 : 20 }}>🍳</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="WeekMenu"
-        component={WeekMenuScreen}
-        options={{
-          title: 'Menu semaine',
-          tabBarLabel: 'Menu',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: focused ? 24 : 20 }}>📅</Text>
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfileNavigator}
-        options={{
-          headerShown: false,
-          tabBarLabel: 'Profil',
-          tabBarIcon: ({ focused }) => (
-            <Text style={{ fontSize: focused ? 24 : 20 }}>👤</Text>
-          ),
-        }}
-      />
+      <Tab.Screen name="FamilyList" component={FamilyListScreen} options={{ tabBarLabel: 'Courses' }} />
+      <Tab.Screen name="Recipes" component={RecipesScreen} options={{ tabBarLabel: 'Recettes' }} />
+      <Tab.Screen name="WeekMenu" component={WeekMenuScreen} options={{ tabBarLabel: 'Menu' }} />
+      <Tab.Screen name="Profile" component={ProfileNavigator} options={{ tabBarLabel: 'Profil' }} />
     </Tab.Navigator>
   );
 }

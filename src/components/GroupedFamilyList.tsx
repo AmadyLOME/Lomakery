@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet,
-  TextInput, Modal, Alert, SectionList,
-} from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, SectionList } from 'react-native';
+import { Text, TextInput } from './Text';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 

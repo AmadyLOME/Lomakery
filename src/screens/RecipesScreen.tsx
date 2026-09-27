@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  Modal,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Image,
-  ActivityIndicator,
-} from 'react-native';
+import { View, FlatList, TouchableOpacity, Alert, Modal, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image, ActivityIndicator } from 'react-native';
+import { Text, TextInput } from '../components/Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
@@ -22,9 +10,12 @@ import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients, s
 import { pickPhoto, askPhotoSource, RECIPE_PHOTO_OPTIONS, PhotoSource } from '../services/photos';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import RecipeCarousel from '../components/RecipeCarousel';
+import ScreenHeader from '../components/ScreenHeader';
+import RoundButton from '../components/RoundButton';
+import Segmented from '../components/Segmented';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, RecipeIngredient, ShoppingItem, ShoppingGroup } from '../types';
-import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
 type IngredientStatus = 'available' | 'missing' | 'unknown';
@@ -409,8 +400,7 @@ export default function RecipesScreen() {
       .catch(() => {});
   }, []);
 
-  const toggleViewMode = () => {
-    const next: ViewMode = viewMode === 'list' ? 'carousel' : 'list';
+  const changeViewMode = (next: ViewMode) => {
     setViewMode(next);
     AsyncStorage.setItem(VIEW_MODE_KEY, next).catch(() => {});
   };
@@ -450,20 +440,22 @@ export default function RecipesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Mes Recettes</Text>
-        <View style={styles.headerActions}>
-          {recipes.length > 0 && (
-            <TouchableOpacity style={styles.viewToggle} onPress={toggleViewMode}>
-              <Text style={styles.viewToggleText}>{viewMode === 'list' ? '🎠 Carrousel' : '☰ Liste'}</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateModal(true)}>
-            <Text style={styles.createBtnText}>+ Nouvelle</Text>
-          </TouchableOpacity>
+      <ScreenHeader
+        title="Recettes"
+        right={<RoundButton icon="add" variant="primary" label="Nouvelle recette" onPress={() => setShowCreateModal(true)} />}
+      />
+      {recipes.length > 0 && (
+        <View style={styles.viewToggleRow}>
+          <Segmented
+            value={viewMode}
+            onChange={changeViewMode}
+            options={[
+              { value: 'list', label: 'Liste', icon: 'list' },
+              { value: 'carousel', label: 'Carrousel', icon: 'albums-outline' },
+            ]}
+          />
         </View>
-      </View>
+      )}
 
       {recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -483,7 +475,7 @@ export default function RecipesScreen() {
         <FlatList
           data={recipes}
           keyExtractor={(r) => r.id}
-          contentContainerStyle={{ padding: SPACING.md }}
+          contentContainerStyle={{ paddingHorizontal: SPACING.lg - 4, paddingTop: SPACING.xs, paddingBottom: TAB_BAR_SPACE }}
           renderItem={({ item }) => {
             const { total, available, missing } = getRecipeStats(item, familyItems);
 
@@ -511,8 +503,13 @@ export default function RecipesScreen() {
                     </View>
                   )}
                 </View>
-                <TouchableOpacity onPress={() => handleDelete(item)} style={styles.deleteRecipeBtn}>
-                  <Text style={styles.deleteRecipeBtnText}>🗑</Text>
+                <TouchableOpacity
+                  onPress={() => handleDelete(item)}
+                  style={styles.deleteRecipeBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Supprimer ${item.name}`}
+                >
+                  <Ionicons name="trash-outline" size={18} color={COLORS.dangerText} />
                 </TouchableOpacity>
               </TouchableOpacity>
             );
@@ -582,32 +579,7 @@ export default function RecipesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
-  viewToggle: {
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: SPACING.xs,
-  },
-  viewToggleText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.sm },
-  createBtn: {
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
-  },
-  createBtnText: { color: '#fff', fontWeight: '700', fontSize: FONT_SIZE.md },
+  viewToggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.md },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   emptyEmoji: { fontSize: moderateScale(56), marginBottom: SPACING.md },
@@ -616,25 +588,21 @@ const styles = StyleSheet.create({
 
   recipeCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
+    borderRadius: 24,
+    padding: SPACING.md - 2,
+    marginBottom: SPACING.md - 4,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    ...SHADOWS.soft,
   },
   thumb: {
-    width: scale(52),
-    height: scale(52),
-    borderRadius: BORDER_RADIUS.sm,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: 16,
     marginRight: SPACING.md,
     backgroundColor: COLORS.surfaceWarm,
   },
-  recipeName: { fontSize: FONT_SIZE.lg, fontWeight: '700', color: COLORS.text },
+  recipeName: { fontSize: FONT_SIZE.lg + 1, fontWeight: '800', color: COLORS.text },
   recipeDesc: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
   recipeBadges: { flexDirection: 'row', marginTop: SPACING.xs, gap: SPACING.xs },
   badge: {
@@ -643,9 +611,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
     borderRadius: BORDER_RADIUS.full,
+    overflow: 'hidden',
   },
-  deleteRecipeBtn: { padding: SPACING.xs },
-  deleteRecipeBtnText: { fontSize: 18 },
+  deleteRecipeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // Modal création
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: SPACING.md },
