@@ -16,6 +16,7 @@ import {
   incrementStock,
 } from '../services/lists';
 import { ShoppingItem, ShoppingGroup } from '../types';
+import { notify, senderName } from '../services/notifications';
 import FamilySettings from '../components/FamilySettings';
 import FamilyShoppingView from '../components/FamilyShoppingView';
 import { COLORS, SPACING, FONT_SIZE } from '../constants/theme';
@@ -39,6 +40,30 @@ export default function FamilyListScreen({ route }: any) {
   }, [householdId]);
 
   if (!user || !householdId) return null;
+
+  // checked = « À la casa », non coché = « À acheter »
+  const notifyToBuy = (name: string) =>
+    notify(householdId, '🛒 À acheter', `${senderName()} a ajouté « ${name} » à la liste`);
+
+  const handleToggle = (id: string, checked: boolean) => {
+    toggleItem(collectionPath, id, checked);
+    const item = items.find((i) => i.id === id);
+    if (item && !checked) notifyToBuy(item.name);
+  };
+
+  const handleDecrement = (item: ShoppingItem) => {
+    decrementStock(collectionPath, item);
+    const newStock = (item.stock ?? 1) - 1;
+    if (item.checked && newStock <= (item.threshold ?? 0)) {
+      notify(householdId, '📉 Stock bas', `« ${item.name} » est passé sous le seuil (reste ${newStock})`);
+    }
+  };
+
+  const handleAddItem = async (item: Omit<ShoppingItem, 'id' | 'createdAt'>) => {
+    const id = await addFamilyItem(householdId, item);
+    if (!item.checked) notifyToBuy(item.name);
+    return id;
+  };
 
   return (
     <View style={styles.container}>
@@ -67,9 +92,9 @@ export default function FamilyListScreen({ route }: any) {
         <FamilyShoppingView
           items={items}
           groups={groups}
-          onToggle={(id, checked) => toggleItem(collectionPath, id, checked)}
+          onToggle={handleToggle}
           onCheckWithStock={(id, addedQty, currentStock, threshold) => checkItemWithStock(collectionPath, id, addedQty, currentStock, threshold)}
-          onDecrement={(item) => decrementStock(collectionPath, item)}
+          onDecrement={handleDecrement}
           onIncrement={(item) => incrementStock(collectionPath, item)}
         />
       ) : (
@@ -77,7 +102,7 @@ export default function FamilyListScreen({ route }: any) {
           items={items}
           groups={groups}
           currentUserId={user.uid}
-          onAddItem={(item) => addFamilyItem(householdId, item)}
+          onAddItem={handleAddItem}
           onUpdateItem={(id, fields) => updateItem(collectionPath, id, fields)}
           onDeleteItem={(id) => deleteItem(collectionPath, id)}
           onAddGroup={(name) => addFamilyGroup(householdId, name)}

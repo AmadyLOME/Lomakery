@@ -14,6 +14,7 @@ import { subscribeToWeekMenu, addToWeekMenu, removeFromWeekMenu, resetWeekMenu }
 import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
 import { Recipe, ShoppingItem, ShoppingGroup } from '../types';
+import { notify, senderName } from '../services/notifications';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
@@ -74,7 +75,14 @@ export default function WeekMenuScreen() {
       'Vider toutes les recettes de la semaine ?',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Vider', style: 'destructive', onPress: () => resetWeekMenu(householdId) },
+        {
+          text: 'Vider',
+          style: 'destructive',
+          onPress: () => {
+            resetWeekMenu(householdId);
+            notify(householdId, '📅 Menu de la semaine', `${senderName()} a vidé le menu de la semaine`);
+          },
+        },
       ]
     );
   };
@@ -86,6 +94,8 @@ export default function WeekMenuScreen() {
   const handleAdd = (recipeId: string) => {
     addToWeekMenu(householdId, menuIds, recipeId);
     setShowPicker(false);
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (recipe) notify(householdId, '📅 Menu de la semaine', `${senderName()} a ajouté « ${recipe.name} » au menu`);
   };
 
   return (

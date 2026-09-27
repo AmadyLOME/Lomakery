@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
+import { registerForPushNotifications } from '../services/notifications';
 import LoginScreen from '../screens/LoginScreen';
 import HouseholdSetupScreen from '../screens/HouseholdSetupScreen';
 import FamilyListScreen from '../screens/FamilyListScreen';
@@ -103,6 +104,14 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const { user, profile, loading } = useAuth();
+  const householdId: string | undefined = profile?.householdId;
+
+  useEffect(() => {
+    if (!user || !householdId) return;
+    registerForPushNotifications(user.uid, householdId).catch((e) =>
+      console.error('[notifications] register error:', e?.message ?? e)
+    );
+  }, [user?.uid, householdId]);
 
   if (loading) return null;
 

@@ -47,7 +47,6 @@ export interface User {
   email: string;
   displayName: string;
   householdId?: string;
-  fcmToken?: string;
 }
 
 export interface Household {

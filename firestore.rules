@@ -88,6 +88,13 @@ service cloud.firestore {
       match /weekMenu/{docId} {
         allow read, write: if isMember(householdId);
       }
+
+      // Tokens de notification push : lisibles par les membres,
+      // chacun n'écrit que le sien
+      match /pushTokens/{userId} {
+        allow read: if isMember(householdId);
+        allow write: if isMember(householdId) && request.auth.uid == userId;
+      }
     }
   }
 }
