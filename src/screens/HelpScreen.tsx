@@ -23,6 +23,10 @@ const SECTIONS: Section[] = [
     title: 'Quoi de neuf ?',
     content: [
       {
+        question: 'Le mode « En magasin »',
+        answer: 'Dans Courses, le bouton boutique en haut ouvre une liste plein écran des seuls articles à acheter, rayon par rayon dans l\'ordre de votre magasin, avec de gros ronds à cocher et une barre de progression. L\'écran reste allumé.',
+      },
+      {
         question: 'Des recettes plus complètes',
         answer: 'Chaque recette a maintenant des portions (quantités recalculées), des étiquettes pour les classer, des étapes avec minuteurs, un mode cuisine plein écran et un bouton pour la partager par WhatsApp, SMS ou Mail.',
       },
@@ -89,6 +93,10 @@ const SECTIONS: Section[] = [
         answer: 'Après avoir coché un article ou en avoir créé un, un bandeau « Annuler » s\'affiche quelques secondes en bas de l\'écran : touchez-le pour revenir en arrière.',
       },
       {
+        question: 'Faire les courses en magasin',
+        answer: 'Touchez le bouton boutique en haut de Courses. Seuls les articles « À acheter » s\'affichent, en gros, rayon par rayon dans l\'ordre du parcours. Touchez le rond quand l\'article est dans le caddie : il passe « À la casa » pour toute la famille et reste affiché barré (retouchez-le pour annuler). La barre en haut montre votre avancée (8 / 15) et l\'écran ne se met pas en veille. « Terminer » ferme le mode.',
+      },
+      {
         question: 'Comment cocher un article ?',
         answer: 'Appuyez sur le cercle à gauche de l\'article. S\'il est dans "À acheter" il passe dans "À la casa", et inversement.',
       },
@@ -118,6 +126,10 @@ const SECTIONS: Section[] = [
       {
         question: 'Créer un groupe',
         answer: 'Dans le paramétrage, appuyez sur le bouton orange + en bas à droite pour créer un groupe (ex : Boucherie, Poissonnerie). Les groupes permettent d\'organiser vos articles par rayon. Appui long sur un groupe pour le renommer.',
+      },
+      {
+        question: 'Ordre des rayons (parcours du magasin)',
+        answer: 'Dans le Paramétrage, bouton « Ordre » (ou l\'icône ⇅ en mode magasin) : montez ou descendez chaque rayon avec les flèches pour suivre votre parcours dans le magasin, puis « Enregistrer ». L\'ordre est commun à tout le foyer et s\'applique partout dans l\'app. Un nouveau rayon se place à la fin.',
       },
       {
         question: 'Ajouter un article',

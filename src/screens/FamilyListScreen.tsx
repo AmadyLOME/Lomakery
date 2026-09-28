@@ -17,11 +17,14 @@ import {
   checkItemWithStock,
   decrementStock,
   incrementStock,
+  setGroupOrder,
 } from '../services/lists';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { notify, senderName } from '../services/notifications';
 import FamilySettings from '../components/FamilySettings';
 import FamilyShoppingView from '../components/FamilyShoppingView';
+import StoreMode from '../components/StoreMode';
+import GroupOrderSheet from '../components/GroupOrderSheet';
 import { COLORS } from '../constants/theme';
 
 type Tab = 'liste' | 'parametrage';
@@ -32,6 +35,8 @@ export default function FamilyListScreen({ route }: any) {
   const [groups, setGroups] = useState<ShoppingGroup[]>([]);
   const [activeTab, setActiveTab] = useState<Tab>(route?.params?.initialTab ?? 'liste');
   const [householdName, setHouseholdName] = useState<string | null>(null);
+  const [inStore, setInStore] = useState(false);
+  const [reordering, setReordering] = useState(false);
 
   const householdId: string = profile?.householdId ?? '';
   const collectionPath = `households/${householdId}/familyList`;
@@ -82,7 +87,10 @@ export default function FamilyListScreen({ route }: any) {
         title={activeTab === 'liste' ? 'Courses' : 'Paramétrage'}
         right={
           activeTab === 'liste' ? (
-            <RoundButton icon="options-outline" label="Paramétrer la liste" onPress={() => setActiveTab('parametrage')} />
+            <>
+              <RoundButton icon="storefront-outline" label="Mode en magasin" onPress={() => setInStore(true)} />
+              <RoundButton icon="options-outline" label="Paramétrer la liste" onPress={() => setActiveTab('parametrage')} />
+            </>
           ) : (
             <RoundButton icon="checkmark" variant="primary" label="Terminer le paramétrage" onPress={() => setActiveTab('liste')} />
           )
@@ -113,6 +121,24 @@ export default function FamilyListScreen({ route }: any) {
           onAddGroup={(name) => addFamilyGroup(householdId, name)}
           onUpdateGroup={(groupId, name) => updateFamilyGroup(householdId, groupId, name)}
           onDeleteGroup={(groupId) => deleteFamilyGroup(householdId, groupId)}
+          onReorderGroups={() => setReordering(true)}
+        />
+      )}
+
+      <GroupOrderSheet
+        visible={reordering}
+        groups={groups}
+        onSave={(ids) => setGroupOrder(householdId, ids)}
+        onClose={() => setReordering(false)}
+      />
+      {inStore && (
+        <StoreMode
+          items={items}
+          groups={groups}
+          onToggle={handleToggle}
+          onCheckWithStock={(id, addedQty, currentStock, threshold) => checkItemWithStock(collectionPath, id, addedQty, currentStock, threshold)}
+          onSaveOrder={(ids) => setGroupOrder(householdId, ids)}
+          onClose={() => setInStore(false)}
         />
       )}
     </View>

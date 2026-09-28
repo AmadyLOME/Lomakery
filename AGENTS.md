@@ -48,7 +48,7 @@ Tout ce qui est partagé vit sous `households/{householdId}` ; un compte apparti
 | `users/{uid}` | profil privé (email, nom, householdId) |
 | `invites/{code}` | code d'invitation → householdId (lecture par `get` seulement) |
 | `households/{id}` | nom, `members[]`, `inviteCode` |
-| `…/familyList`, `…/familyGroups` | articles (stock, seuil) et rayons |
+| `…/familyList`, `…/familyGroups` | articles (stock, seuil) et rayons (`order` = parcours du magasin, commun au foyer) |
 | `…/recipes`, `…/recipePhotos` | recettes (ingrédients, `servings`, `tags[]`, `steps[]`, `prepMin`/`cookMin`/`restMin`) et leurs photos (séparées pour ne pas les recharger) |
 | `…/weeks/{lundi AAAA-MM-JJ}` | menu planifié : `entries[]` (créneaux, cuisson, mangé, sauté/reporté) |
 | `…/savedMenus` | menus enregistrés, positions relatives |
@@ -94,7 +94,7 @@ l'ouverture du Menu.
 
 Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
 malignes » et « mode magasin et mode sombre ». Statut : **validées**. Livraison 1 (points 1 et 3) en production ;
-livraison 2 (points 4, 5, 7, 8) développée ; livraison 3 (point 2) à faire ; mode sombre (point 6) reporté.
+livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) développée ; mode sombre (point 6) reporté.
 
 1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
    pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi

@@ -29,6 +29,7 @@ export interface ShoppingGroup {
   id: string;
   name: string;
   createdAt: Date;
+  order?: number;       // position dans le parcours du magasin (commune au foyer) ; absent → à la fin, par nom
 }
 
 export interface ShoppingList {

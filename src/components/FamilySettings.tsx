@@ -18,13 +18,14 @@ interface Props {
   onAddGroup: (name: string) => void;
   onUpdateGroup: (groupId: string, name: string) => void;
   onDeleteGroup: (groupId: string) => void;
+  onReorderGroups: () => void;
   currentUserId: string;
 }
 
 type ItemModalMode = 'add' | 'edit';
 
 export default function FamilySettings({
-  items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onUpdateGroup, onDeleteGroup, currentUserId,
+  items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onUpdateGroup, onDeleteGroup, onReorderGroups, currentUserId,
 }: Props) {
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [itemModalMode, setItemModalMode] = useState<ItemModalMode>('add');
@@ -149,6 +150,10 @@ export default function FamilySettings({
         {groups.length > 1 && (
           <View style={styles.listToolbar}>
             <Text style={styles.toolbarText}>{groups.length} groupes · {items.length} articles</Text>
+            <TouchableOpacity style={styles.orderBtn} onPress={onReorderGroups} accessibilityRole="button">
+              <Ionicons name="swap-vertical" size={15} color={COLORS.text} />
+              <Text style={styles.orderBtnText}>Ordre</Text>
+            </TouchableOpacity>
             <CollapseAllButton allCollapsed={allCollapsed(groupIds)} onPress={() => toggleAll(groupIds)} />
           </View>
         )}
@@ -343,6 +348,18 @@ const styles = StyleSheet.create({
     marginHorizontal: SPACING.lg - 4,
     marginBottom: SPACING.sm + 2,
   },
+  orderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minHeight: 34,
+    paddingHorizontal: 12,
+    borderRadius: 17,
+    backgroundColor: COLORS.sand,
+    marginLeft: 'auto',
+    marginRight: SPACING.sm,
+  },
+  orderBtnText: { fontSize: 13, fontWeight: '800', color: COLORS.text },
   toolbarText: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
   section: {
     marginHorizontal: SPACING.lg - 4,

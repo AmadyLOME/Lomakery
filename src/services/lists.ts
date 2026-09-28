@@ -9,6 +9,7 @@ import {
   query,
   orderBy,
   serverTimestamp,
+  writeBatch,
   Unsubscribe,
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -20,7 +21,14 @@ function byName<T extends { name: string }>(a: T, b: T) {
   return collator.compare(a.name.trim(), b.name.trim());
 }
 
-// Écoute en temps réel les groupes de la liste famille
+// Ordre du parcours magasin, puis alphabétique pour les rayons pas encore placés
+function byStoreOrder(a: ShoppingGroup, b: ShoppingGroup) {
+  const oa = a.order ?? Number.MAX_SAFE_INTEGER;
+  const ob = b.order ?? Number.MAX_SAFE_INTEGER;
+  return oa !== ob ? oa - ob : byName(a, b);
+}
+
+// Écoute en temps réel les groupes de la liste famille (dans l'ordre du magasin)
 export function subscribeToFamilyGroups(
   householdId: string,
   onChange: (groups: ShoppingGroup[]) => void
@@ -29,7 +37,7 @@ export function subscribeToFamilyGroups(
     collection(db, 'households', householdId, 'familyGroups'),
     (snap) => {
       const groups = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingGroup));
-      onChange(groups.sort(byName));
+      onChange(groups.sort(byStoreOrder));
     },
     (error) => console.error('[familyGroups] onSnapshot error:', error.code)
   );
@@ -45,6 +53,15 @@ export async function addFamilyGroup(householdId: string, name: string): Promise
 
 export async function updateFamilyGroup(householdId: string, groupId: string, name: string) {
   await updateDoc(doc(db, 'households', householdId, 'familyGroups', groupId), { name });
+}
+
+// Enregistre l'ordre du parcours magasin : position de chaque rayon, en une seule écriture
+export async function setGroupOrder(householdId: string, orderedIds: string[]) {
+  const batch = writeBatch(db);
+  orderedIds.forEach((id, index) => {
+    batch.update(doc(db, 'households', householdId, 'familyGroups', id), { order: index });
+  });
+  await batch.commit();
 }
 
 export async function deleteFamilyGroup(householdId: string, groupId: string) {
