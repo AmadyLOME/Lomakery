@@ -101,7 +101,7 @@ l'ouverture du Menu.
 
 Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
 malignes » et « mode magasin et mode sombre ». Statut : **validées**. Livraison 1 (points 1 et 3) en production ;
-livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en production ; mode sombre (point 6) développé.
+livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en production ; mode sombre (point 6) en production.
 
 1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
    pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
