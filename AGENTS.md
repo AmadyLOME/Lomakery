@@ -32,7 +32,8 @@ src/
   components/            Text, ScreenHeader, RoundButton, Segmented, FloatingTabBar, SlotGrid, PolaroidGarland, feuilles modales…
   services/              accès Firestore / Auth / notifications / photos, un fichier par domaine
   hooks/                 useAuth, useRecipePhoto
-  utils/                 weeks (semaines, créneaux), menuDisplay, time, responsive
+  utils/                 weeks (semaines, créneaux), menuDisplay, time, responsive, ingredients (disponibilité),
+                         quantities (portions), tags, recipeShare (texte / HTML du partage)
   constants/             theme (couleurs, arrondis, polices, TAB_BAR_SPACE), palette
   types/                 types partagés
 ```
@@ -48,7 +49,7 @@ Tout ce qui est partagé vit sous `households/{householdId}` ; un compte apparti
 | `invites/{code}` | code d'invitation → householdId (lecture par `get` seulement) |
 | `households/{id}` | nom, `members[]`, `inviteCode` |
 | `…/familyList`, `…/familyGroups` | articles (stock, seuil) et rayons |
-| `…/recipes`, `…/recipePhotos` | recettes et leurs photos (séparées pour ne pas les recharger) |
+| `…/recipes`, `…/recipePhotos` | recettes (ingrédients, `servings`, `tags[]`, `steps[]`, `prepMin`/`cookMin`/`restMin`) et leurs photos (séparées pour ne pas les recharger) |
 | `…/weeks/{lundi AAAA-MM-JJ}` | menu planifié : `entries[]` (créneaux, cuisson, mangé, sauté/reporté) |
 | `…/savedMenus` | menus enregistrés, positions relatives |
 | `…/members/{uid}` | nom + photo visibles par le foyer |
@@ -92,22 +93,23 @@ l'ouverture du Menu.
 ## Feuille de route
 
 Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
-malignes » et « mode magasin et mode sombre ». Statut : **validées** ; développement en cours (sauf le mode sombre,
-reporté).
+malignes » et « mode magasin et mode sombre ». Statut : **validées**. Livraison 1 (points 1 et 3) en production ;
+livraison 2 (points 4, 5, 7, 8) développée ; livraison 3 (point 2) à faire ; mode sombre (point 6) reporté.
 
 1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
    pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
    (proposé d'après les autres recettes, sinon à choisir). Une feuille de confirmation liste ce qui va être fait.
 2. **Mode « En magasin »** — vue plein écran des seuls articles « À acheter », gros ronds à cocher, barre de
    progression (8 / 15), écran maintenu allumé (`expo-keep-awake`), rayons dans l'**ordre du parcours magasin**
-   (nouveau champ `order` sur `familyGroups`, réglé par glisser-déposer, commun au foyer).
+   (nouveau champ `order` sur `familyGroups`, réglé par flèches ↑↓ plutôt que glisser-déposer, commun au foyer).
 3. **Ajout rapide dans Courses** — champ « + Ajouter » avec suggestions tirées des articles connus (passer « À
    acheter », ou créer un nouvel article), et bandeau **« Annuler »** de quelques secondes après un cochage ou une
    suppression.
 4. **Portions** — nombre de personnes de référence par recette (`servings`) et sélecteur « Pour N personnes » ;
    les quantités numériques sont recalculées (« 1 kg » → « 1,5 kg »), le texte libre est affiché tel quel.
 5. **Étiquettes de recettes** — étiquettes libres par recette (`tags: string[]`) avec couleurs, filtre en pastilles
-   dans l'onglet Recettes, gestion des étiquettes depuis le Profil.
+   dans l'onglet Recettes (plus une recherche par nom ou ingrédient). Les étiquettes se choisissent / créent depuis la
+   fiche recette ; une gestion globale (renommer, supprimer) pourra venir plus tard.
 6. **Mode sombre** *(reporté — à faire plus tard, spécifications conservées)* — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
    AsyncStorage) ; palette sombre dédiée dans `theme.ts` (fond #141A14, surfaces #1F2A20, orange éclairci pour le
    contraste), les couleurs ne sont plus lues en dur mais via un contexte de thème.
@@ -120,7 +122,8 @@ reporté).
 8. **Partager une recette** — bouton partager dans la fiche recette → feuille « Partager la recette » : format
    « Message » (texte lisible dans WhatsApp, SMS, Mail) ou « Fiche PDF » (mise en page avec photo, via
    `expo-print` + `expo-sharing`) ; choix des portions (quantités recalculées) et de ce qui est inclus
-   (ingrédients, étapes, photo) ; aperçu ; puis menu de partage natif iOS (`Share`). Plus tard : lien
+   (ingrédients, étapes, photo) ; aperçu ; puis menu de partage natif iOS (`Share` pour le texte,
+   `Sharing.shareAsync` pour le PDF). Plus tard : lien
    d'import pour qu'un autre foyer TeninGrocery ajoute la recette en un geste.
 
 Plus tard : rappels de cuisson (notifications locales), vraie app (build EAS + TestFlight) avec hors-ligne complet,

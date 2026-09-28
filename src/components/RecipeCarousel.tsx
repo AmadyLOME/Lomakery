@@ -7,6 +7,7 @@ import { AvailabilityBadge } from './Availability';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { moderateScale } from '../utils/responsive';
+import { tagColor } from '../utils/tags';
 
 interface RecipeStats {
   total: number;
@@ -106,6 +107,14 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
         >
           <Ionicons name="trash-outline" size={18} color={COLORS.dangerText} />
         </TouchableOpacity>
+        {(recipe.tags ?? []).length > 0 && (
+          <View style={styles.tags}>
+            {(recipe.tags ?? []).slice(0, 3).map((t) => {
+              const c = tagColor(t);
+              return <Text key={t} style={[styles.tag, { backgroundColor: c.bg, color: c.fg }]}>{t}</Text>;
+            })}
+          </View>
+        )}
       </View>
 
       <View style={styles.body}>
@@ -134,6 +143,8 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
 }
 
 const styles = StyleSheet.create({
+  tags: { position: 'absolute', left: 12, bottom: 12, right: 60, flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  tag: { fontSize: 12, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, overflow: 'hidden' },
   container: { flex: 1, paddingBottom: TAB_BAR_SPACE - 20 },
   card: {
     backgroundColor: COLORS.surface,

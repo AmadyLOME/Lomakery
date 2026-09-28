@@ -23,6 +23,10 @@ const SECTIONS: Section[] = [
     title: 'Quoi de neuf ?',
     content: [
       {
+        question: 'Des recettes plus complètes',
+        answer: 'Chaque recette a maintenant des portions (quantités recalculées), des étiquettes pour les classer, des étapes avec minuteurs, un mode cuisine plein écran et un bouton pour la partager par WhatsApp, SMS ou Mail.',
+      },
+      {
         question: 'Un nouvel Accueil',
         answer: 'L\'app s\'ouvre maintenant sur l\'Accueil : guirlande de photos de famille, repas du jour, courses et menu en un coup d\'œil, mots de la famille et infos utiles. Le Profil se trouve derrière votre avatar, en haut à droite.',
       },
@@ -152,11 +156,31 @@ const SECTIONS: Section[] = [
       },
       {
         question: 'Ajouter des ingrédients',
-        answer: 'Ouvrez une recette et appuyez sur le bouton +. Un écran s\'ouvre avec vos articles classés par groupe. Saisissez une quantité (optionnel) et sélectionnez l\'article. La pastille indique sa disponibilité : coche verte = à la casa, caddie orange = à acheter (déjà dans la liste), point d\'exclamation rouge = absent de la liste de courses.',
+        answer: 'Ouvrez une recette, onglet « Ingrédients », et appuyez sur « Ajouter un ingrédient » en bas. Un écran s\'ouvre avec vos articles classés par groupe. Saisissez une quantité (optionnel) et sélectionnez l\'article. La pastille indique sa disponibilité : coche verte = à la casa, caddie orange = à acheter (déjà dans la liste), point d\'exclamation rouge = absent de la liste de courses.',
       },
       {
         question: 'Modifier la quantité d\'un ingrédient',
-        answer: 'Dans le détail d\'une recette, appuyez sur l\'ingrédient (icône ✏️). Une boîte de dialogue s\'ouvre pour modifier la quantité.',
+        answer: 'Dans le détail d\'une recette, appuyez sur l\'ingrédient (icône ✏️). Une boîte de dialogue s\'ouvre pour modifier la quantité. La quantité saisie correspond au nombre de personnes de référence de la recette.',
+      },
+      {
+        question: 'Changer le nombre de personnes (portions)',
+        answer: 'Dans une recette, utilisez − et + à côté de « Pour N personnes » : les quantités chiffrées sont recalculées (« 1 kg » devient « 1,5 kg »), la quantité d\'origine reste affichée entre parenthèses. Le texte libre (« une pincée ») ne change pas. Ce choix n\'est pas enregistré. Pour changer la base de la recette (le nombre de personnes pour lequel les quantités sont saisies), touchez « modifier ».',
+      },
+      {
+        question: 'Classer les recettes avec des étiquettes',
+        answer: 'Dans une recette, touchez « + Étiquette » sous la photo : choisissez des étiquettes (Plat, Dessert, Rapide, Végé…) ou créez-en une. Dans l\'onglet Recettes, les pastilles en haut filtrent la liste, et le champ de recherche trouve une recette par son nom ou par un ingrédient.',
+      },
+      {
+        question: 'Ajouter les étapes et les temps',
+        answer: 'Dans une recette, passez sur l\'onglet « Étapes ». Touchez Préparation, Cuisson ou Repos pour saisir les durées. « Ajouter une étape » ouvre une fiche : texte de l\'étape et minuteur optionnel. Touchez une étape pour la modifier, la monter, la descendre ou la supprimer.',
+      },
+      {
+        question: 'Le mode cuisine',
+        answer: 'Onglet « Étapes », bouton « Mode cuisine » : une étape à la fois en grand, les ingrédients cités avec leurs quantités, et l\'écran reste allumé. Si l\'étape a un minuteur, lancez-le : une alerte sonne à la fin, même si vous changez d\'étape ou d\'app (autorisez les notifications).',
+      },
+      {
+        question: 'Partager une recette',
+        answer: 'Dans une recette, bouton partager en haut à droite. Choisissez « Message » (texte pour WhatsApp, SMS, Mail) ou « Fiche PDF » (mise en page avec photo), le nombre de personnes et ce qu\'il faut inclure, puis choisissez l\'app dans le menu de partage.',
       },
       {
         question: 'Ajouter les ingrédients absents aux courses',

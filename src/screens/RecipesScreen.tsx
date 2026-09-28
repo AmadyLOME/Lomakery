@@ -5,7 +5,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
-import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients, setRecipePhoto } from '../services/recipes';
+import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients, setRecipePhoto, updateRecipe, RecipeFields } from '../services/recipes';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import TagEditorSheet from '../components/TagEditorSheet';
+import StepEditorSheet from '../components/StepEditorSheet';
+import ShareRecipeSheet from '../components/ShareRecipeSheet';
+import CookingMode from '../components/CookingMode';
+import { scaleQuantity, formatFactor, formatMinutes } from '../utils/quantities';
+import { tagColor, allTags, hasTag } from '../utils/tags';
 import { pickPhoto, askPhotoSource, RECIPE_PHOTO_OPTIONS, PhotoSource } from '../services/photos';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import RecipeCarousel from '../components/RecipeCarousel';
@@ -20,7 +27,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import RoundButton from '../components/RoundButton';
 import Segmented from '../components/Segmented';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
-import { Recipe, RecipeIngredient, ShoppingItem, ShoppingGroup } from '../types';
+import { Recipe, RecipeIngredient, RecipeStep, ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
@@ -199,6 +206,7 @@ function IngredientPickerView({
 
 interface RecipeDetailModalProps {
   recipe: Recipe;
+  allRecipes: Recipe[];
   familyItems: ShoppingItem[];
   familyGroups: ShoppingGroup[];
   householdId: string;
@@ -206,13 +214,38 @@ interface RecipeDetailModalProps {
   onClose: () => void;
 }
 
-function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, userId, onClose }: RecipeDetailModalProps) {
+type DetailTab = 'ingredients' | 'steps';
+type TimeField = 'prepMin' | 'cookMin' | 'restMin';
+
+const TIME_FIELDS: { key: TimeField; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { key: 'prepMin', label: 'Préparation', icon: 'restaurant-outline' },
+  { key: 'cookMin', label: 'Cuisson', icon: 'flame-outline' },
+  { key: 'restMin', label: 'Repos', icon: 'hourglass-outline' },
+];
+
+// Firestore refuse `undefined` : on retire timerMin quand il n'y a pas de minuteur
+function cleanStep(s: RecipeStep): RecipeStep {
+  return s.timerMin ? { id: s.id, text: s.text, timerMin: s.timerMin } : { id: s.id, text: s.text };
+}
+
+function RecipeDetailModal({ recipe, allRecipes, familyItems, familyGroups, householdId, userId, onClose }: RecipeDetailModalProps) {
+  const insets = useSafeAreaInsets();
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>(recipe.ingredients || []);
+  const [steps, setSteps] = useState<RecipeStep[]>(recipe.steps || []);
   const [showPicker, setShowPicker] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
+  const [tab, setTab] = useState<DetailTab>('ingredients');
+  const baseServings = recipe.servings || 4;
+  const [people, setPeople] = useState(baseServings);
+  const [showTags, setShowTags] = useState(false);
+  const [stepEdit, setStepEdit] = useState<{ index: number; step: RecipeStep | null } | null>(null);
+  const [cooking, setCooking] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const photoUri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
   const missing = collectMissing([{ name: recipe.name, ingredients }], familyItems);
+  const factor = people / baseServings;
+  const tags = recipe.tags ?? [];
 
   const addMissing = async (entries: { name: string; groupId?: string }[]) => {
     await addMissingItems(householdId, entries, userId);
@@ -221,6 +254,11 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
       notify(householdId, '🛒 À acheter', `${senderName()} a ajouté ${entries.length} article${entries.length > 1 ? 's' : ''} pour « ${recipe.name} »`);
     }
   };
+
+  const save = (fields: RecipeFields) =>
+    updateRecipe(householdId, recipe.id, fields).catch((e: any) =>
+      Alert.alert('Erreur', "La recette n'a pas pu être enregistrée.\n" + (e?.message ?? ''))
+    );
 
   const changePhoto = () => {
     const upload = async (source: PhotoSource) => {
@@ -250,6 +288,13 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
   useEffect(() => {
     setIngredients(recipe.ingredients || []);
   }, [recipe.ingredients]);
+  useEffect(() => {
+    setSteps(recipe.steps || []);
+  }, [recipe.steps]);
+  // Si la base de la recette change, on repart de la nouvelle base
+  useEffect(() => {
+    setPeople(baseServings);
+  }, [baseServings]);
 
   const handleIngredientSelected = async (name: string, qty: string) => {
     setShowPicker(false);
@@ -272,7 +317,7 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
   const editIngredientQty = (ing: RecipeIngredient) => {
     Alert.prompt(
       ing.name,
-      'Modifier la quantité',
+      `Quantité pour ${baseServings} personne${baseServings > 1 ? 's' : ''} (base de la recette)`,
       async (newQty) => {
         const updated = ingredients.map((i) =>
           i.id === ing.id ? { ...i, quantity: newQty.trim() || undefined } : i
@@ -284,6 +329,67 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
       ing.quantity ?? ''
     );
   };
+
+  const changeBaseServings = () =>
+    Alert.prompt(
+      'Recette prévue pour…',
+      'Nombre de personnes pour lesquelles les quantités sont saisies',
+      (v) => {
+        const n = parseInt(v, 10);
+        if (!isNaN(n) && n > 0 && n <= 50) save({ servings: n });
+      },
+      'plain-text',
+      String(baseServings),
+      'number-pad'
+    );
+
+  const editTime = (key: TimeField, label: string) =>
+    Alert.prompt(
+      label,
+      'Durée en minutes (vide pour retirer)',
+      (v) => {
+        const n = parseInt(v, 10);
+        save({ [key]: !isNaN(n) && n > 0 ? n : undefined });
+      },
+      'plain-text',
+      recipe[key] ? String(recipe[key]) : '',
+      'number-pad'
+    );
+
+  const saveSteps = (next: RecipeStep[]) => {
+    const cleaned = next.map(cleanStep);
+    setSteps(cleaned);
+    save({ steps: cleaned });
+  };
+
+  const onStepSave = (text: string, timerMin?: number) => {
+    if (!stepEdit) return;
+    if (stepEdit.step) {
+      saveSteps(steps.map((s) => (s.id === stepEdit.step!.id ? { ...s, text, timerMin } : s)));
+    } else {
+      saveSteps([...steps, { id: Date.now().toString(), text, timerMin }]);
+    }
+    setStepEdit(null);
+  };
+
+  const onStepMove = (dir: -1 | 1) => {
+    if (!stepEdit?.step) return;
+    const i = stepEdit.index;
+    const j = i + dir;
+    if (j < 0 || j >= steps.length) return;
+    const next = [...steps];
+    [next[i], next[j]] = [next[j], next[i]];
+    saveSteps(next);
+    setStepEdit({ index: j, step: next[j] });
+  };
+
+  const onStepDelete = () => {
+    if (!stepEdit?.step) return;
+    saveSteps(steps.filter((s) => s.id !== stepEdit.step!.id));
+    setStepEdit(null);
+  };
+
+  const factorLabel = factor === 1 ? '' : ` · quantités ×${formatFactor(factor)}`;
 
   return (
     <Modal
@@ -305,48 +411,207 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
         ) : (
           // Vue détail recette
           <>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity onPress={onClose} style={styles.backBtn}>
-                <Text style={styles.backBtnText}>← Retour</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitle} numberOfLines={1}>{recipe.name}</Text>
-              <View style={{ width: scale(80) }} />
+            <View style={styles.detailHeader}>
+              <RoundButton icon="chevron-back" label="Retour" onPress={onClose} />
+              <Text style={styles.detailTitle} numberOfLines={2}>{recipe.name}</Text>
+              <RoundButton icon="share-outline" label="Partager la recette" onPress={() => setSharing(true)} />
             </View>
 
-            <TouchableOpacity style={styles.detailPhotoBox} onPress={changePhoto} activeOpacity={0.85}>
-              {photoUri ? (
-                <Image source={{ uri: photoUri }} style={styles.detailPhoto} />
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: SPACING.lg }}>
+              <TouchableOpacity style={styles.detailPhotoBox} onPress={changePhoto} activeOpacity={0.85}>
+                {photoUri ? (
+                  <Image source={{ uri: photoUri }} style={styles.detailPhoto} />
+                ) : (
+                  <Text style={styles.detailPhotoAdd}>📷 Ajouter une photo</Text>
+                )}
+                {photoUri && !photoBusy && (
+                  <View style={styles.detailPhotoEdit}>
+                    <Text style={styles.detailPhotoEditText}>✏️ Photo</Text>
+                  </View>
+                )}
+                {photoBusy && (
+                  <View style={styles.detailPhotoBusy}>
+                    <ActivityIndicator color="#fff" />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <View style={styles.tagRow}>
+                {tags.map((t) => {
+                  const c = tagColor(t);
+                  return (
+                    <TouchableOpacity key={t} style={[styles.tagChip, { backgroundColor: c.bg }]} onPress={() => setShowTags(true)}>
+                      <Text style={[styles.tagChipText, { color: c.fg }]}>{t}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                <TouchableOpacity style={styles.tagAdd} onPress={() => setShowTags(true)} accessibilityRole="button">
+                  <Ionicons name={tags.length ? 'pencil' : 'add'} size={14} color={COLORS.textMuted} />
+                  <Text style={styles.tagAddText}>{tags.length ? 'Étiquettes' : 'Étiquette'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {recipe.description ? (
+                <Text style={styles.recipeDescription}>{recipe.description}</Text>
+              ) : null}
+
+              <View style={styles.portions}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.portionsTitle}>Pour {people} personne{people > 1 ? 's' : ''}</Text>
+                  <TouchableOpacity onPress={changeBaseServings} accessibilityRole="button" hitSlop={8}>
+                    <Text style={styles.portionsSub}>
+                      Recette prévue pour {baseServings}{factorLabel} · <Text style={styles.portionsLink}>modifier</Text>
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.portionsBtn, people <= 1 && { opacity: 0.35 }]}
+                  disabled={people <= 1}
+                  onPress={() => setPeople((n) => n - 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Une personne de moins"
+                >
+                  <Ionicons name="remove" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.portionsBtn}
+                  onPress={() => setPeople((n) => Math.min(50, n + 1))}
+                  accessibilityRole="button"
+                  accessibilityLabel="Une personne de plus"
+                >
+                  <Ionicons name="add" size={20} color={COLORS.text} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.tabsRow}>
+                <Segmented
+                  stretch
+                  value={tab}
+                  onChange={setTab}
+                  options={[
+                    { value: 'ingredients', label: 'Ingrédients', count: ingredients.length },
+                    { value: 'steps', label: 'Étapes', count: steps.length },
+                  ]}
+                />
+              </View>
+
+              {tab === 'ingredients' ? (
+                <>
+                  <View style={styles.legend}>
+                    <AvailabilityLegend />
+                  </View>
+
+                  {missing.rows.length > 0 && (
+                    <TouchableOpacity style={styles.missingBtn} onPress={() => setShowMissing(true)} accessibilityRole="button">
+                      <Ionicons name="cart" size={18} color="#fff" />
+                      <Text style={styles.missingBtnText}>
+                        Ajouter {missing.rows.length === 1 ? "l'absent" : `les ${missing.rows.length} absents`} aux courses
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {ingredients.length === 0 && (
+                    <Text style={styles.emptyText}>Aucun ingrédient. Appuie sur « Ajouter un ingrédient ».</Text>
+                  )}
+                  {ingredients.map((ing) => {
+                    const status = getIngredientStatus(ing.name, familyItems);
+                    const qty = scaleQuantity(ing.quantity, factor);
+                    return (
+                      <TouchableOpacity
+                        key={ing.id}
+                        style={styles.ingredientRow}
+                        onPress={() => editIngredientQty(ing)}
+                      >
+                        <View style={styles.statusIcon}><AvailabilityIcon status={status} /></View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.ingredientName, { color: statusColor(status) }]}>
+                            {ing.name}
+                          </Text>
+                          {qty ? (
+                            <Text style={styles.ingredientQty}>
+                              {qty}
+                              {factor !== 1 && qty !== ing.quantity ? <Text style={styles.ingredientBase}>  (recette : {ing.quantity})</Text> : null}
+                            </Text>
+                          ) : (
+                            <Text style={styles.ingredientQtyEmpty}>Ajouter une quantité…</Text>
+                          )}
+                        </View>
+                        <Text style={styles.editQtyHint}>✏️</Text>
+                        <TouchableOpacity
+                          onPress={() => removeIngredient(ing.id)}
+                          style={styles.deleteIngBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Retirer ${ing.name}`}
+                        >
+                          <Text style={styles.deleteIngBtnText}>✕</Text>
+                        </TouchableOpacity>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
               ) : (
-                <Text style={styles.detailPhotoAdd}>📷 Ajouter une photo</Text>
-              )}
-              {photoUri && !photoBusy && (
-                <View style={styles.detailPhotoEdit}>
-                  <Text style={styles.detailPhotoEditText}>✏️ Photo</Text>
-                </View>
-              )}
-              {photoBusy && (
-                <View style={styles.detailPhotoBusy}>
-                  <ActivityIndicator color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
+                <>
+                  <View style={styles.timesRow}>
+                    {TIME_FIELDS.map(({ key, label, icon }) => (
+                      <TouchableOpacity
+                        key={key}
+                        style={[styles.timeChip, !recipe[key] && styles.timeChipEmpty]}
+                        onPress={() => editTime(key, label)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${label} : ${recipe[key] ? formatMinutes(recipe[key]!) : 'non renseigné'}. Modifier`}
+                      >
+                        <Ionicons name={icon} size={15} color={COLORS.text} />
+                        <View>
+                          <Text style={styles.timeLabel}>{label}</Text>
+                          <Text style={styles.timeValue}>{recipe[key] ? formatMinutes(recipe[key]!) : '—'}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
-            {recipe.description ? (
-              <Text style={styles.recipeDescription}>{recipe.description}</Text>
-            ) : null}
+                  {steps.length === 0 && (
+                    <Text style={styles.emptyText}>Aucune étape. Ajoute-les une par une, dans l'ordre.</Text>
+                  )}
+                  {steps.map((s, i) => (
+                    <TouchableOpacity key={s.id} style={styles.stepRow} onPress={() => setStepEdit({ index: i, step: s })}>
+                      <View style={styles.stepNum}><Text style={styles.stepNumText}>{i + 1}</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.stepText}>{s.text}</Text>
+                        {s.timerMin ? (
+                          <View style={styles.stepTimer}>
+                            <Ionicons name="timer-outline" size={13} color="#3F4575" />
+                            <Text style={styles.stepTimerText}>{formatMinutes(s.timerMin)}</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity style={styles.addStep} onPress={() => setStepEdit({ index: steps.length, step: null })} accessibilityRole="button">
+                    <Ionicons name="add" size={18} color={COLORS.primary} />
+                    <Text style={styles.addStepText}>Ajouter une étape</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
 
-            <View style={styles.legend}>
-              <AvailabilityLegend />
+            <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, SPACING.md) }]}>
+              {tab === 'ingredients' ? (
+                <TouchableOpacity style={styles.bottomBtn} onPress={() => setShowPicker(true)} accessibilityRole="button">
+                  <Ionicons name="add" size={20} color="#fff" />
+                  <Text style={styles.bottomBtnText}>Ajouter un ingrédient</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.bottomBtn, { backgroundColor: COLORS.ink }, steps.length === 0 && { opacity: 0.4 }]}
+                  disabled={steps.length === 0}
+                  onPress={() => setCooking(true)}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="play" size={18} color="#fff" />
+                  <Text style={styles.bottomBtnText}>Mode cuisine</Text>
+                </TouchableOpacity>
+              )}
             </View>
-
-            {missing.rows.length > 0 && (
-              <TouchableOpacity style={styles.missingBtn} onPress={() => setShowMissing(true)} accessibilityRole="button">
-                <Ionicons name="cart" size={18} color="#fff" />
-                <Text style={styles.missingBtnText}>
-                  Ajouter {missing.rows.length === 1 ? "l'absent" : `les ${missing.rows.length} absents`} aux courses
-                </Text>
-              </TouchableOpacity>
-            )}
 
             <MissingToCartSheet
               visible={showMissing}
@@ -356,45 +621,33 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
               onConfirm={addMissing}
               onClose={() => setShowMissing(false)}
             />
-
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
-              {ingredients.length === 0 && (
-                <Text style={styles.emptyText}>Aucun ingrédient. Appuie sur + pour en ajouter.</Text>
-              )}
-              {ingredients.map((ing) => {
-                const status = getIngredientStatus(ing.name, familyItems);
-                return (
-                  <TouchableOpacity
-                    key={ing.id}
-                    style={styles.ingredientRow}
-                    onPress={() => editIngredientQty(ing)}
-                  >
-                    <View style={styles.statusIcon}><AvailabilityIcon status={status} /></View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.ingredientName, { color: statusColor(status) }]}>
-                        {ing.name}
-                      </Text>
-                      {ing.quantity ? (
-                        <Text style={styles.ingredientQty}>{ing.quantity}</Text>
-                      ) : (
-                        <Text style={styles.ingredientQtyEmpty}>Ajouter une quantité…</Text>
-                      )}
-                    </View>
-                    <Text style={styles.editQtyHint}>✏️</Text>
-                    <TouchableOpacity onPress={() => removeIngredient(ing.id)} style={styles.deleteIngBtn}>
-                      <Text style={styles.deleteIngBtnText}>✕</Text>
-                    </TouchableOpacity>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <View style={styles.addIngredientBox}>
-              <TouchableOpacity style={styles.addIngBtn} onPress={() => setShowPicker(true)}>
-                <Text style={styles.addIngBtnText}>+</Text>
-              </TouchableOpacity>
-              <Text style={styles.addIngHint}>Ajouter un ingrédient</Text>
-            </View>
+            <TagEditorSheet
+              visible={showTags}
+              tags={tags}
+              suggestions={allTags(allRecipes)}
+              onSave={(next) => { setShowTags(false); save({ tags: next }); }}
+              onClose={() => setShowTags(false)}
+            />
+            <StepEditorSheet
+              visible={!!stepEdit}
+              step={stepEdit?.step ?? null}
+              index={stepEdit?.index ?? 0}
+              total={steps.length}
+              onSave={onStepSave}
+              onMove={onStepMove}
+              onDelete={onStepDelete}
+              onClose={() => setStepEdit(null)}
+            />
+            <ShareRecipeSheet
+              visible={sharing}
+              recipe={{ ...recipe, ingredients, steps }}
+              servings={people}
+              photoUri={photoUri}
+              onClose={() => setSharing(false)}
+            />
+            {cooking && (
+              <CookingMode recipe={{ ...recipe, ingredients, steps }} factor={factor} onClose={() => setCooking(false)} />
+            )}
           </>
         )}
       </View>
@@ -416,6 +669,17 @@ export default function RecipesScreen() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [search, setSearch] = useState('');
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+
+  const tagsInUse = allTags(recipes);
+  const activeTag = tagFilter && hasTag(tagsInUse, tagFilter) ? tagFilter : null;
+  const query = normalizeName(search);
+  const visibleRecipes = recipes.filter(
+    (r) =>
+      (!activeTag || hasTag(r.tags, activeTag)) &&
+      (!query || normalizeName(r.name).includes(query) || (r.ingredients ?? []).some((i) => normalizeName(i.name).includes(query)))
+  );
 
   useEffect(() => {
     AsyncStorage.getItem(VIEW_MODE_KEY)
@@ -469,6 +733,18 @@ export default function RecipesScreen() {
       />
       {recipes.length > 0 && (
         <View style={styles.viewToggleRow}>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={17} color={COLORS.textMuted} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Chercher une recette ou un ingrédient"
+              placeholderTextColor={COLORS.textSecondary}
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+          </View>
           <Segmented
             value={viewMode}
             onChange={changeViewMode}
@@ -479,6 +755,33 @@ export default function RecipesScreen() {
           />
         </View>
       )}
+      {tagsInUse.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
+          <TouchableOpacity
+            style={[styles.filterChip, !activeTag && styles.filterChipAll]}
+            onPress={() => setTagFilter(null)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: !activeTag }}
+          >
+            <Text style={[styles.filterChipText, !activeTag && { color: '#fff' }]}>Toutes</Text>
+          </TouchableOpacity>
+          {tagsInUse.map((t) => {
+            const on = activeTag === t;
+            const c = tagColor(t);
+            return (
+              <TouchableOpacity
+                key={t}
+                style={[styles.filterChip, { backgroundColor: on ? c.fg : c.bg }]}
+                onPress={() => setTagFilter(on ? null : t)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: on }}
+              >
+                <Text style={[styles.filterChipText, { color: on ? '#fff' : c.fg }]}>{t}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {recipes.length === 0 ? (
         <View style={styles.emptyContainer}>
@@ -486,9 +789,17 @@ export default function RecipesScreen() {
           <Text style={styles.emptyTitle}>Aucune recette</Text>
           <Text style={styles.emptySubtitle}>Crée ta première recette pour commencer</Text>
         </View>
+      ) : visibleRecipes.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyEmoji}>🔍</Text>
+          <Text style={styles.emptyTitle}>Aucune recette trouvée</Text>
+          <TouchableOpacity onPress={() => { setSearch(''); setTagFilter(null); }} accessibilityRole="button">
+            <Text style={[styles.emptySubtitle, { color: COLORS.primary, fontWeight: '800' }]}>Effacer la recherche et le filtre</Text>
+          </TouchableOpacity>
+        </View>
       ) : viewMode === 'carousel' ? (
         <RecipeCarousel
-          recipes={recipes}
+          recipes={visibleRecipes}
           householdId={householdId}
           getStats={(r) => getRecipeStats(r, familyItems)}
           onOpen={setSelectedRecipe}
@@ -496,7 +807,9 @@ export default function RecipesScreen() {
         />
       ) : (
         <FlatList
-          data={recipes}
+          data={visibleRecipes}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ paddingHorizontal: SPACING.lg - 4, paddingTop: SPACING.xs, paddingBottom: TAB_BAR_SPACE }}
           renderItem={({ item }) => {
@@ -510,6 +823,16 @@ export default function RecipesScreen() {
                   {item.description ? (
                     <Text style={styles.recipeDesc} numberOfLines={1}>{item.description}</Text>
                   ) : null}
+                  {(item.tags ?? []).length > 0 && (
+                    <View style={styles.cardTags}>
+                      {(item.tags ?? []).slice(0, 3).map((t) => {
+                        const c = tagColor(t);
+                        return (
+                          <Text key={t} style={[styles.cardTag, { backgroundColor: c.bg, color: c.fg }]}>{t}</Text>
+                        );
+                      })}
+                    </View>
+                  )}
                   {total > 0 && (
                     <View style={styles.recipeBadges}>
                       {available > 0 && <AvailabilityBadge status="available" count={available} />}
@@ -581,6 +904,7 @@ export default function RecipesScreen() {
       {selectedRecipe && (
         <RecipeDetailModal
           recipe={selectedRecipe}
+          allRecipes={recipes}
           familyItems={familyItems}
           familyGroups={familyGroups}
           householdId={householdId}
@@ -597,7 +921,32 @@ export default function RecipesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  viewToggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.md },
+  viewToggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.sm + 2, gap: SPACING.sm + 2 },
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    minHeight: 46,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.soft,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: SPACING.sm },
+  filterScroll: { flexGrow: 0 },
+  filterRow: { gap: 6, paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.md - 2 },
+  filterChip: { minHeight: 34, paddingHorizontal: 13, borderRadius: BORDER_RADIUS.full, justifyContent: 'center', backgroundColor: COLORS.sand },
+  filterChipAll: { backgroundColor: COLORS.ink },
+  filterChipText: { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  cardTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  cardTag: {
+    fontSize: 11,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.full,
+    overflow: 'hidden',
+  },
 
   emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl },
   emptyEmoji: { fontSize: moderateScale(56), marginBottom: SPACING.md },
@@ -666,13 +1015,129 @@ const styles = StyleSheet.create({
   backBtnText: { color: COLORS.primary, fontWeight: '700', fontSize: FONT_SIZE.md },
   modalTitle: { flex: 1, fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
 
+  detailHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm + 2,
+  },
+  detailTitle: { flex: 1, fontSize: 22, fontWeight: '800', color: COLORS.text, textAlign: 'center' },
+
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: SPACING.md, paddingTop: SPACING.sm + 4 },
+  tagChip: { minHeight: 30, paddingHorizontal: 11, borderRadius: BORDER_RADIUS.full, justifyContent: 'center' },
+  tagChipText: { fontSize: 13, fontWeight: '800' },
+  tagAdd: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    minHeight: 30,
+    paddingHorizontal: 11,
+    borderRadius: BORDER_RADIUS.full,
+    borderWidth: 1.5,
+    borderColor: COLORS.sandDark,
+    borderStyle: 'dashed',
+  },
+  tagAddText: { fontSize: 13, fontWeight: '800', color: COLORS.textMuted },
+
+  portions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    padding: SPACING.md - 2,
+    borderRadius: 22,
+    backgroundColor: COLORS.surface,
+    ...SHADOWS.soft,
+  },
+  portionsTitle: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  portionsSub: { fontSize: 12.5, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },
+  portionsLink: { fontSize: 12.5, fontWeight: '800', color: COLORS.primary, textDecorationLine: 'underline' },
+  portionsBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
+
+  tabsRow: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: SPACING.sm },
+
+  timesRow: { flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm },
+  timeChip: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 50,
+    paddingHorizontal: 10,
+    borderRadius: 18,
+    backgroundColor: COLORS.surface,
+  },
+  timeChipEmpty: { backgroundColor: 'transparent', borderWidth: 1.5, borderColor: COLORS.sandDark, borderStyle: 'dashed' },
+  timeLabel: { fontSize: 11, fontWeight: '800', color: COLORS.textMuted },
+  timeValue: { fontSize: 14, fontWeight: '800', color: COLORS.text },
+
+  stepRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm + 4,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  stepNum: { width: 30, height: 30, borderRadius: 15, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+  stepNumText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  stepText: { fontSize: 16, fontWeight: '600', color: COLORS.text, lineHeight: 22 },
+  stepTimer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: '#E4E6F5',
+  },
+  stepTimerText: { fontSize: 12, fontWeight: '800', color: '#3F4575' },
+  addStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minHeight: 48,
+    margin: SPACING.md,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+  },
+  addStepText: { fontSize: 15, fontWeight: '800', color: COLORS.primary },
+
+  bottomBar: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm + 2,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.surface,
+  },
+  bottomBtn: {
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: COLORS.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+  },
+  bottomBtnText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  ingredientBase: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, fontStyle: 'italic' },
+
   detailPhotoBox: {
     height: scale(200),
+    marginHorizontal: SPACING.md,
+    borderRadius: 24,
+    overflow: 'hidden',
     backgroundColor: COLORS.surfaceWarm,
     alignItems: 'center',
     justifyContent: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
   },
   detailPhoto: { width: '100%', height: '100%' },
   detailPhotoAdd: { fontSize: FONT_SIZE.lg, fontWeight: '600', color: COLORS.primary },
@@ -717,10 +1182,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: SPACING.sm,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.surfaceWarm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    paddingVertical: SPACING.xs,
   },
   legendText: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary },
 

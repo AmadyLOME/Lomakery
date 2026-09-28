@@ -31,7 +31,8 @@
           "cameraPermission": "TeninGrocery utilise l'appareil photo pour photographier vos recettes et votre profil."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-sharing"
     ],
     "extra": {
       "eas": {

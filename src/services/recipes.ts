@@ -14,6 +14,8 @@ import {
 import { db } from './firebase';
 import { Recipe, RecipeIngredient } from '../types';
 
+export type RecipeFields = Partial<Pick<Recipe, 'name' | 'description' | 'servings' | 'tags' | 'steps' | 'prepMin' | 'cookMin' | 'restMin'>>;
+
 export function subscribeToRecipes(
   householdId: string,
   onChange: (recipes: Recipe[]) => void
@@ -38,10 +40,20 @@ export async function addRecipe(
     name,
     description: description || '',
     ingredients: [],
+    servings: 4,
+    tags: [],
+    steps: [],
     createdBy,
     createdAt: serverTimestamp(),
   });
   return ref.id;
+}
+
+// Met à jour des champs de la recette ; `undefined` efface le champ (Firestore refuse `undefined`)
+export async function updateRecipe(householdId: string, recipeId: string, fields: RecipeFields) {
+  const data: Record<string, any> = {};
+  for (const [key, value] of Object.entries(fields)) data[key] = value === undefined ? deleteField() : value;
+  await updateDoc(doc(db, 'households', householdId, 'recipes', recipeId), data);
 }
 
 export async function deleteRecipe(householdId: string, recipeId: string) {

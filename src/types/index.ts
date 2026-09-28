@@ -72,6 +72,18 @@ export interface Recipe {
   createdAt: Date;
   // Présent si la recette a une photo (dans recipePhotos/{id}) ; sert aussi de clé de cache
   photoUpdatedAt?: number;
+  servings?: number;          // nombre de personnes de référence (quantités saisies pour ce nombre)
+  tags?: string[];            // étiquettes libres (Plat, Rapide, Végé…)
+  steps?: RecipeStep[];
+  prepMin?: number;           // temps de préparation
+  cookMin?: number;           // temps de cuisson
+  restMin?: number;           // repos / marinade
+}
+
+export interface RecipeStep {
+  id: string;
+  text: string;
+  timerMin?: number;          // minuteur proposé en mode cuisine
 }
 
 export interface MemberProfile {
