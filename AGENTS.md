@@ -111,6 +111,11 @@ malignes » et « mode magasin et mode sombre ». Statut : **maquettes proposée
    AsyncStorage) ; palette sombre dédiée dans `theme.ts` (fond #141A14, surfaces #1F2A20, orange éclairci pour le
    contraste), les couleurs ne sont plus lues en dur mais via un contexte de thème.
 
+7. **Étapes de recette et mode cuisine** — onglet « Ingrédients | Étapes » dans la fiche recette ; étapes
+   numérotées et réordonnables (`steps: { id, text, timerMin? }[]`), durées de préparation / cuisson / marinade ;
+   « Mode cuisine » plein écran : une étape à la fois en grand, progression, ingrédients de l'étape (quantités selon
+   les portions), minuteur avec alerte (notification locale), écran maintenu allumé.
+
 Plus tard : rappels de cuisson (notifications locales), vraie app (build EAS + TestFlight) avec hors-ligne complet,
 base Firebase de test, règles déployées par la Firebase CLI et vérifications automatiques, partage de la liste en
 texte, suggestions à partir de l'historique, Siri / widget iOS.
