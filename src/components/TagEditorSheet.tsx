@@ -5,6 +5,7 @@ import { Text, TextInput } from './Text';
 import BottomSheet from './BottomSheet';
 import { hasTag, tagColor } from '../utils/tags';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -17,6 +18,7 @@ interface Props {
 const DEFAULTS = ['Plat', 'Entrée', 'Dessert', 'Rapide', 'Végé', 'Poisson', 'Fête', 'Batch cooking'];
 
 export default function TagEditorSheet({ visible, tags, suggestions, onSave, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [selected, setSelected] = useState<string[]>([]);
   const [draft, setDraft] = useState('');
 
@@ -90,7 +92,7 @@ export default function TagEditorSheet({ visible, tags, suggestions, onSave, onC
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   hint: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginTop: 2, marginBottom: SPACING.md },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },

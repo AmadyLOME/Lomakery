@@ -10,6 +10,7 @@ import { Meal, MenuEntry, Recipe, SlotKey } from '../types';
 import { DAY_SHORT, formatDayShort, parseSlot, sortSlots } from '../utils/weeks';
 import { activeSlots, newEntryId } from '../services/weekPlan';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 type CookMode = 'same' | 'veille' | 'autre';
 
@@ -35,6 +36,7 @@ function cookModeOf(entry: MenuEntry): CookMode {
 }
 
 export default function MenuEntrySheet({ visible, weekId, recipes, initial, presetSlot, householdId, busySlots, onSubmit, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [recipeId, setRecipeId] = useState<string | null>(null);
   const [slots, setSlots] = useState<SlotKey[]>([]);
   const [mode, setMode] = useState<CookMode>('same');
@@ -229,6 +231,7 @@ export default function MenuEntrySheet({ visible, weekId, recipes, initial, pres
 }
 
 function RecipeThumb({ householdId, recipe }: { householdId: string; recipe: Recipe }) {
+  const styles = useStyles(makeStyles);
   const uri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
   return uri ? (
     <Image source={{ uri }} style={styles.thumb} />
@@ -239,7 +242,7 @@ function RecipeThumb({ householdId, recipe }: { householdId: string; recipe: Rec
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   header: {
     flexDirection: 'row',

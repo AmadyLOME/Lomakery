@@ -7,6 +7,7 @@ import { Text } from './Text';
 import GroupOrderSheet from './GroupOrderSheet';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   items: ShoppingItem[];
@@ -20,6 +21,7 @@ interface Props {
 // Mode « En magasin » : seuls les articles à acheter, rayon par rayon dans l'ordre du parcours,
 // gros ronds à cocher, écran maintenu allumé. Les articles cochés restent visibles (barrés) jusqu'à la sortie.
 export default function StoreMode({ items, groups, onToggle, onCheckWithStock, onSaveOrder, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   useKeepAwake();
   const insets = useSafeAreaInsets();
   // Articles achetés pendant cette visite (ils restent affichés, barrés)
@@ -153,7 +155,7 @@ export default function StoreMode({ items, groups, onToggle, onCheckWithStock, o
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, paddingHorizontal: SPACING.lg - 4 },
   kicker: { fontSize: 12, fontWeight: '800', color: COLORS.primary, letterSpacing: 0.8 },

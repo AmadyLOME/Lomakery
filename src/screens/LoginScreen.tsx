@@ -4,8 +4,10 @@ import { Text, TextInput } from '../components/Text';
 import { login } from '../services/auth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 export default function LoginScreen() {
+  const styles = useStyles(makeStyles);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -72,7 +74,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   inner: {
     flexGrow: 1,

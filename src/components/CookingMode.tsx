@@ -9,6 +9,7 @@ import { Recipe } from '../types';
 import { normalizeName } from '../utils/ingredients';
 import { scaleQuantity, formatMinutes } from '../utils/quantities';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   recipe: Recipe;
@@ -29,6 +30,8 @@ const DARK = '#1F2E1F';
 const DARK_2 = '#2B3A2C';
 const LIGHT = '#FBF6EA';
 const SOFT = '#CFE0CF';
+const INK = '#1E2E1E';        // texte sur les pastilles claires (le mode cuisine est toujours sombre)
+const INK_MUTED = '#5E574A';
 
 function formatClock(sec: number): string {
   const s = Math.max(0, Math.ceil(sec));
@@ -51,6 +54,7 @@ function stepIngredients(recipe: Recipe, text: string, factor: number) {
 
 // Mode cuisine : une étape à la fois, en grand, écran allumé, minuteur avec alerte
 export default function CookingMode({ recipe, factor, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   useKeepAwake();
   const insets = useSafeAreaInsets();
   const steps = recipe.steps ?? [];
@@ -197,12 +201,12 @@ export default function CookingMode({ recipe, factor, onClose }: Props) {
                 </TouchableOpacity>
               )}
               <TouchableOpacity style={styles.timerStop} onPress={stopTimer} accessibilityRole="button" accessibilityLabel="Arrêter le minuteur">
-                <Ionicons name="stop" size={18} color={COLORS.text} />
+                <Ionicons name="stop" size={18} color={INK} />
               </TouchableOpacity>
             </View>
           ) : step.timerMin ? (
             <TouchableOpacity style={styles.startTimer} onPress={() => startTimer(index, step.timerMin!)} accessibilityRole="button">
-              <Ionicons name="timer-outline" size={22} color={COLORS.text} />
+              <Ionicons name="timer-outline" size={22} color={INK} />
               <Text style={styles.startTimerText}>Lancer le minuteur · {formatMinutes(step.timerMin)}</Text>
             </TouchableOpacity>
           ) : null}
@@ -224,7 +228,7 @@ export default function CookingMode({ recipe, factor, onClose }: Props) {
             accessibilityRole="button"
           >
             <Text style={styles.navText}>{isLast ? 'Terminé !' : 'Étape suivante'}</Text>
-            <Ionicons name={isLast ? 'checkmark' : 'chevron-forward'} size={20} color={COLORS.text} />
+            <Ionicons name={isLast ? 'checkmark' : 'chevron-forward'} size={20} color={INK} />
           </TouchableOpacity>
         </View>
       </View>
@@ -232,7 +236,7 @@ export default function CookingMode({ recipe, factor, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: DARK, paddingHorizontal: SPACING.lg - 4 },
   topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.lg },
   quit: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 44, paddingHorizontal: 14, borderRadius: 22, backgroundColor: DARK_2 },
@@ -267,11 +271,11 @@ const styles = StyleSheet.create({
     padding: SPACING.md + 2,
     marginTop: SPACING.lg,
   },
-  timerLabel: { fontSize: 13, fontWeight: '800', color: COLORS.textMuted },
-  timerClock: { fontSize: 42, fontWeight: '800', color: COLORS.text, lineHeight: 48, fontVariant: ['tabular-nums'] },
-  timerSub: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
+  timerLabel: { fontSize: 13, fontWeight: '800', color: INK_MUTED },
+  timerClock: { fontSize: 42, fontWeight: '800', color: INK, lineHeight: 48, fontVariant: ['tabular-nums'] },
+  timerSub: { fontSize: 13, fontWeight: '700', color: INK_MUTED },
   timerBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  timerStop: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.sand, alignItems: 'center', justifyContent: 'center' },
+  timerStop: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F1E8D6', alignItems: 'center', justifyContent: 'center' },
   startTimer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -282,10 +286,10 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.mustardLight,
     marginTop: SPACING.lg,
   },
-  startTimerText: { fontSize: 17, fontWeight: '800', color: COLORS.text },
+  startTimerText: { fontSize: 17, fontWeight: '800', color: INK },
   nav: { flexDirection: 'row', gap: SPACING.sm + 2 },
   navBtn: { height: 60, borderRadius: 30, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   navPrev: { flex: 1, backgroundColor: DARK_2 },
   navNext: { flex: 1.4, backgroundColor: COLORS.primaryLight },
-  navText: { fontSize: 16, fontWeight: '800', color: COLORS.text },
+  navText: { fontSize: 16, fontWeight: '800', color: INK },
 });

@@ -21,10 +21,12 @@ import { formatLongDate, formatRelative } from '../utils/time';
 import { softColor } from '../constants/palette';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 const MEALS: Meal[] = ['midi', 'soir'];
 
 export default function HomeScreen() {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const { user, profile } = useAuth();
   const householdId: string = profile?.householdId ?? '';
@@ -309,7 +311,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.md - 4 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

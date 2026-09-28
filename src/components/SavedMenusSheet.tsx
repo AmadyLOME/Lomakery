@@ -8,6 +8,7 @@ import { MenuEntry, Recipe, SavedMenu } from '../types';
 import { applySavedMenu, deleteSavedMenu, saveMenu, subscribeToSavedMenus } from '../services/weekPlan';
 import { addWeeks, formatWeekRange, weekIdOf } from '../utils/weeks';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -24,6 +25,7 @@ interface Props {
 type Target = 'current' | 'next';
 
 export default function SavedMenusSheet({ visible, householdId, uid, weekId, weekLabel, entries, recipes, onApplied, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [menus, setMenus] = useState<SavedMenu[]>([]);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -194,7 +196,7 @@ export default function SavedMenusSheet({ visible, householdId, uid, weekId, wee
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: {
     flexDirection: 'row',

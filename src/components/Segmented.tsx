@@ -3,6 +3,7 @@ import { View, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { COLORS, SPACING } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 export interface SegmentOption<T extends string> {
   value: T;
@@ -21,6 +22,7 @@ interface SegmentedProps<T extends string> {
 
 // Sélecteur en pilule (ex. « À acheter / À la casa », « Liste / Carrousel »)
 export default function Segmented<T extends string>({ options, value, onChange, stretch }: SegmentedProps<T>) {
+  const styles = useStyles(makeStyles);
   return (
     <View style={[styles.track, stretch ? styles.trackStretch : styles.trackHug]}>
       {options.map((opt) => {
@@ -53,7 +55,7 @@ export default function Segmented<T extends string>({ options, value, onChange, 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   track: { flexDirection: 'row', backgroundColor: COLORS.sand, borderRadius: 999, padding: 4 },
   trackStretch: { alignSelf: 'stretch' },
   trackHug: { alignSelf: 'flex-start' },
@@ -67,7 +69,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   activeSurface: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.segmentActive,
     shadowColor: '#3C280A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

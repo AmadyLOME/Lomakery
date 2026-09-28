@@ -6,6 +6,7 @@ import BottomSheet from './BottomSheet';
 import { AvailabilityIcon } from './Availability';
 import { ShoppingGroup } from '../types';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 export interface MissingRow {
   key: string;          // nom normalisé
@@ -24,6 +25,7 @@ interface Props {
 
 // « Ajouter aux courses » : crée les ingrédients absents de la liste, « À acheter », dans le rayon choisi
 export default function MissingToCartSheet({ visible, rows, alreadyToBuy, groups, onConfirm, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [groupOf, setGroupOf] = useState<Record<string, string | undefined>>({});
   const [busy, setBusy] = useState(false);
@@ -129,7 +131,7 @@ export default function MissingToCartSheet({ visible, rows, alreadyToBuy, groups
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   subtitle: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginTop: 2 },

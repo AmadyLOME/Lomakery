@@ -7,6 +7,7 @@ import Segmented from './Segmented';
 import { InfoCard, InfoField } from '../types';
 import { SOFT_COLORS } from '../constants/palette';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -33,6 +34,7 @@ const TEMPLATES: { title: string; color: number; fields: InfoField[] }[] = [
 ];
 
 export default function InfoEditSheet({ visible, initial, onSave, onDelete, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [title, setTitle] = useState('');
   const [color, setColor] = useState(0);
   const [fields, setFields] = useState<InfoField[]>([empty()]);
@@ -194,7 +196,7 @@ export default function InfoEditSheet({ visible, initial, onSave, onDelete, onCl
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   header: {
     flexDirection: 'row',

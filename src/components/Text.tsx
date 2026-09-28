@@ -9,6 +9,7 @@ import {
   TextStyle,
 } from 'react-native';
 import { fontForWeight } from '../constants/theme';
+import { useTheme } from '../theme/ThemeProvider';
 
 // Nunito existe en une famille par graisse : on convertit `fontWeight` en `fontFamily`
 // (sinon iOS/Android retombent sur la police système pour les graisses non chargées).
@@ -25,6 +26,15 @@ export function Text({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...props }
   return <RNText {...props} maxFontSizeMultiplier={maxFontSizeMultiplier} style={withFont(style)} />;
 }
 
+// Clavier sombre en mode sombre
 export function TextInput({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...props }: TextInputProps) {
-  return <RNTextInput {...props} maxFontSizeMultiplier={maxFontSizeMultiplier} style={withFont(style)} />;
+  const { scheme } = useTheme();
+  return (
+    <RNTextInput
+      keyboardAppearance={scheme}
+      {...props}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      style={withFont(style)}
+    />
+  );
 }

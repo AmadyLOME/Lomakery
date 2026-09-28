@@ -3,6 +3,7 @@ import { Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { COLORS, SPACING, TAB_BAR_SPACE } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 const DURATION_MS = 5000;
 
@@ -33,6 +34,7 @@ export function useUndoToast() {
 }
 
 export default function UndoToast({ toast, onHide }: { toast: Toast | null; onHide: () => void }) {
+  const styles = useStyles(makeStyles);
   const opacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function UndoToast({ toast, onHide }: { toast: Toast | null; onHi
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   toast: {
     position: 'absolute',
     left: SPACING.lg - 4,
@@ -80,5 +82,5 @@ const styles = StyleSheet.create({
   },
   message: { flex: 1, fontSize: 14, fontWeight: '700', color: '#FBF6EA', paddingVertical: SPACING.sm },
   undo: { height: 38, borderRadius: 19, backgroundColor: COLORS.mustardLight, paddingHorizontal: 14, justifyContent: 'center' },
-  undoText: { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  undoText: { fontSize: 14, fontWeight: '800', color: COLORS.onAccent },
 });

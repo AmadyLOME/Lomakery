@@ -32,6 +32,7 @@ src/
   components/            Text, ScreenHeader, RoundButton, Segmented, FloatingTabBar, SlotGrid, PolaroidGarland, feuilles modales…
   services/              accès Firestore / Auth / notifications / photos, un fichier par domaine
   hooks/                 useAuth, useRecipePhoto
+  theme/                 ThemeProvider (réglage Apparence, useTheme, useStyles)
   utils/                 weeks (semaines, créneaux), menuDisplay, time, responsive, ingredients (disponibilité),
                          quantities (portions), tags, recipeShare (texte / HTML du partage)
   constants/             theme (couleurs, arrondis, polices, TAB_BAR_SPACE), palette
@@ -74,6 +75,12 @@ l'ouverture du Menu.
   passent par une transaction (voir `updateWeek`).
 - Textes et commentaires en français ; accessibilité : `accessibilityRole` / `accessibilityLabel` sur les boutons à
   icône, cibles de 44 px minimum, respect de « Réduire les animations ».
+- **Thème clair / sombre** : `COLORS`, `SHADOWS` et `SOFT_COLORS` sont mis à jour sur place par `applyScheme()`
+  (`src/theme/ThemeProvider.tsx`). Dans chaque fichier : `const makeStyles = () => StyleSheet.create({…})` et, dans
+  chaque composant, `const styles = useStyles(makeStyles);` (ou `useTheme()` s'il n'a pas de styles mais lit `COLORS`).
+  Ne jamais figer une couleur au chargement du module (tableau ou objet de haut niveau) : utiliser un getter ou
+  `useTheme().scheme`. Toute nouvelle couleur = un jeton dans les deux palettes ; texte sur pastille moutarde / orange
+  clair : `COLORS.onAccent`.
 - Vérifier avant de livrer : `npx tsc --noEmit` et `npx expo-doctor`.
 
 ## Développement et déploiement
@@ -94,7 +101,7 @@ l'ouverture du Menu.
 
 Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
 malignes » et « mode magasin et mode sombre ». Statut : **validées**. Livraison 1 (points 1 et 3) en production ;
-livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en production ; mode sombre (point 6) reporté.
+livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en production ; mode sombre (point 6) développé.
 
 1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
    pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
@@ -110,9 +117,10 @@ livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en product
 5. **Étiquettes de recettes** — étiquettes libres par recette (`tags: string[]`) avec couleurs, filtre en pastilles
    dans l'onglet Recettes (plus une recherche par nom ou ingrédient). Les étiquettes se choisissent / créent depuis la
    fiche recette ; une gestion globale (renommer, supprimer) pourra venir plus tard.
-6. **Mode sombre** *(reporté — à faire plus tard, spécifications conservées)* — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
-   AsyncStorage) ; palette sombre dédiée dans `theme.ts` (fond #141A14, surfaces #1F2A20, orange éclairci pour le
-   contraste), les couleurs ne sont plus lues en dur mais via un contexte de thème.
+6. **Mode sombre** — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
+   AsyncStorage `appearance`) ; palettes `LIGHT_COLORS` / `DARK_COLORS` dans `theme.ts` (fond #141A14, surfaces
+   #1F2A20, orange éclairci pour le contraste). Le mode cuisine reste toujours sombre, les polaroïds gardent un papier
+   clair.
 
 7. **Étapes de recette et mode cuisine** — onglet « Ingrédients | Étapes » dans la fiche recette ; étapes
    numérotées et réordonnables (`steps: { id, text, timerMin? }[]`), durées de préparation / cuisson / marinade ;

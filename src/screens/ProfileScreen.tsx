@@ -15,8 +15,12 @@ import Avatar from '../components/Avatar';
 import { Household, MemberProfile } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
+import { useStyles, useTheme, AppearancePreference } from '../theme/ThemeProvider';
+import Segmented from '../components/Segmented';
 
 export default function ProfileScreen() {
+  const styles = useStyles(makeStyles);
+  const { preference, setPreference } = useTheme();
   const { user, profile } = useAuth();
   const navigation = useNavigation<any>();
   const [household, setHousehold] = useState<Household | null>(null);
@@ -146,6 +150,22 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {/* Apparence (propre à ce téléphone) */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>APPARENCE</Text>
+          <Text style={styles.appearanceHint}>« Auto » suit le réglage clair / sombre de l'iPhone. Ce choix ne concerne que ce téléphone.</Text>
+          <Segmented<AppearancePreference>
+            stretch
+            value={preference}
+            onChange={setPreference}
+            options={[
+              { value: 'auto', label: 'Auto', icon: 'phone-portrait-outline' },
+              { value: 'light', label: 'Clair', icon: 'sunny-outline' },
+              { value: 'dark', label: 'Sombre', icon: 'moon-outline' },
+            ]}
+          />
+        </View>
+
         {/* Réglages */}
         <View style={[styles.card, styles.listCard]}>
           <TouchableOpacity style={styles.listRow} onPress={() => navigation.navigate('Help')} accessibilityRole="button">
@@ -168,7 +188,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.md - 2 },
   card: {
@@ -194,6 +214,7 @@ const styles = StyleSheet.create({
   name: { fontSize: moderateScale(22), fontWeight: '800', color: COLORS.text },
   email: { fontSize: FONT_SIZE.md, color: COLORS.textMuted, marginTop: 2 },
   householdRow: { flexDirection: 'row', alignItems: 'center' },
+  appearanceHint: { fontSize: 13, fontWeight: '600', color: COLORS.textMuted, marginTop: 4, marginBottom: SPACING.sm + 4 },
   sectionTitle: { fontSize: 13, fontWeight: '800', color: COLORS.mustardText, letterSpacing: 1 },
   householdName: { fontSize: moderateScale(20), fontWeight: '800', color: COLORS.text },
   memberCount: { fontSize: FONT_SIZE.md, color: COLORS.textMuted },

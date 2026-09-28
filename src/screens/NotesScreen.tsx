@@ -31,8 +31,10 @@ import { FamilyNote, MemberProfile } from '../types';
 import { formatRelative } from '../utils/time';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 export default function NotesScreen({ route }: any) {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const { user, profile } = useAuth();
   const householdId: string = profile?.householdId ?? '';
@@ -192,7 +194,7 @@ export default function NotesScreen({ route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   list: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.md, gap: SPACING.sm + 2 },
   empty: { fontSize: 15, fontWeight: '600', color: COLORS.textMuted, lineHeight: 21, paddingTop: SPACING.sm },
@@ -204,7 +206,7 @@ const styles = StyleSheet.create({
     padding: SPACING.md - 4,
     ...SHADOWS.soft,
   },
-  notePinned: { backgroundColor: '#F6ECCF' },
+  notePinned: { backgroundColor: COLORS.mustardSoft },
   noteHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteAuthor: { fontSize: 13, fontWeight: '800', color: COLORS.text },
   noteTime: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },

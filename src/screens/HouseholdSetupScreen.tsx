@@ -4,8 +4,10 @@ import { Text, TextInput } from '../components/Text';
 import { useAuth } from '../hooks/useAuth';
 import { createHousehold, joinHousehold } from '../services/household';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 export default function HouseholdSetupScreen() {
+  const styles = useStyles(makeStyles);
   const { user } = useAuth();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [householdName, setHouseholdName] = useState('');
@@ -101,7 +103,7 @@ export default function HouseholdSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   flex: { flex: 1, backgroundColor: COLORS.background },
   container: {
     flexGrow: 1,

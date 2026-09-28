@@ -5,6 +5,7 @@ import { Text } from './Text';
 import BottomSheet from './BottomSheet';
 import { ShoppingGroup } from '../types';
 import { COLORS, SPACING } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -15,6 +16,7 @@ interface Props {
 
 // Ordre des rayons dans le magasin, réglé avec des flèches (commun à tout le foyer)
 export default function GroupOrderSheet({ visible, groups, onSave, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [order, setOrder] = useState<ShoppingGroup[]>([]);
   const [busy, setBusy] = useState(false);
 
@@ -80,7 +82,7 @@ export default function GroupOrderSheet({ visible, groups, onSave, onClose }: Pr
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   subtitle: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginTop: 2, marginBottom: SPACING.md },
   row: {

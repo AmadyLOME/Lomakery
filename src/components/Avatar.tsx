@@ -3,6 +3,7 @@ import { View, Image, StyleSheet } from 'react-native';
 import { Text } from './Text';
 import { toDataUri } from '../services/photos';
 import { COLORS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface AvatarProps {
   name?: string;
@@ -12,6 +13,7 @@ interface AvatarProps {
 
 // Photo de profil ronde, ou initiale sur fond vert si pas de photo
 export default function Avatar({ name, photo, size }: AvatarProps) {
+  const styles = useStyles(makeStyles);
   const dims = { width: size, height: size, borderRadius: size / 2 };
   if (photo) {
     return <Image source={{ uri: toDataUri(photo) }} style={[styles.base, dims]} />;
@@ -25,7 +27,7 @@ export default function Avatar({ name, photo, size }: AvatarProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   base: { borderWidth: 2, borderColor: COLORS.mustard },
   placeholder: { backgroundColor: COLORS.green, alignItems: 'center', justifyContent: 'center' },
   initial: { color: '#fff', fontWeight: '700' },

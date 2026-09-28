@@ -8,6 +8,7 @@ import { Text, TextInput } from './Text';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   items: ShoppingItem[];
@@ -27,6 +28,7 @@ type ItemModalMode = 'add' | 'edit';
 export default function FamilySettings({
   items, groups, onAddItem, onUpdateItem, onDeleteItem, onAddGroup, onUpdateGroup, onDeleteGroup, onReorderGroups, currentUserId,
 }: Props) {
+  const styles = useStyles(makeStyles);
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [itemModalMode, setItemModalMode] = useState<ItemModalMode>('add');
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
@@ -338,7 +340,7 @@ export default function FamilySettings({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   listToolbar: {
     flexDirection: 'row',

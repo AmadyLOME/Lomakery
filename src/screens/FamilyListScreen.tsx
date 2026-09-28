@@ -26,10 +26,12 @@ import FamilyShoppingView from '../components/FamilyShoppingView';
 import StoreMode from '../components/StoreMode';
 import GroupOrderSheet from '../components/GroupOrderSheet';
 import { COLORS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 type Tab = 'liste' | 'parametrage';
 
 export default function FamilyListScreen({ route }: any) {
+  const styles = useStyles(makeStyles);
   const { user, profile } = useAuth();
   const [items, setItems] = useState<ShoppingItem[]>([]);
   const [groups, setGroups] = useState<ShoppingGroup[]>([]);
@@ -145,6 +147,6 @@ export default function FamilyListScreen({ route }: any) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 });

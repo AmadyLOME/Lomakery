@@ -10,6 +10,7 @@ import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   items: ShoppingItem[];
@@ -25,6 +26,7 @@ interface Props {
 type ActiveView = 'acheter' | 'dispo';
 
 export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement, onQuickCreate, onDelete }: Props) {
+  const styles = useStyles(makeStyles);
   const [activeView, setActiveView] = useState<ActiveView>('acheter');
   const [search, setSearch] = useState('');
   const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:courses');
@@ -291,7 +293,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
   toggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.sm + 4 },
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   },
   suggestionName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
   suggestionMeta: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
-  suggestionAction: { backgroundColor: '#F9E2D3', borderRadius: BORDER_RADIUS.full, paddingHorizontal: 11, paddingVertical: 6 },
+  suggestionAction: { backgroundColor: COLORS.primarySoft, borderRadius: BORDER_RADIUS.full, paddingHorizontal: 11, paddingVertical: 6 },
   suggestionActionText: { fontSize: 13, fontWeight: '800', color: COLORS.primaryDark },
   searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: SPACING.sm + 2 },
 

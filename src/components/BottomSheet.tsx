@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, SPACING } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -21,6 +22,7 @@ interface Props {
 // Fenêtre qui monte du bas. Elle ne dépasse jamais la zone sûre (encoche, Dynamic Island) :
 // avec le clavier ouvert elle rétrécit et son contenu défile, quel que soit l'iPhone.
 export default function BottomSheet({ visible, onClose, children }: Props) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
@@ -43,7 +45,7 @@ export default function BottomSheet({ visible, onClose, children }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   flex: { flex: 1, justifyContent: 'flex-end' },
   backdrop: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(31,46,31,0.45)' },
   sheet: {

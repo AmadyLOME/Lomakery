@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { COLORS, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 // Disponibilité d'un ingrédient par rapport à la liste de courses.
 // Chaque état a sa couleur ET sa forme (coche, caddie, point d'exclamation) : lisible sans les couleurs.
@@ -15,12 +16,14 @@ export const AVAILABILITY: Record<Availability, {
   bg: string;
   solid: boolean;
 }> = {
-  available: { label: 'À la casa', icon: 'checkmark', fg: '#FFFFFF', bg: COLORS.green, solid: true },
-  toBuy: { label: 'À acheter', icon: 'cart', fg: COLORS.primary, bg: '#F9E2D3', solid: false },
-  missing: { label: 'Absent de la liste', icon: 'alert', fg: COLORS.dangerText, bg: COLORS.dangerSoft, solid: false },
+  // Getters : les couleurs suivent le thème clair / sombre
+  available: { label: 'À la casa', icon: 'checkmark', solid: true, fg: '#FFFFFF', get bg() { return COLORS.green; } },
+  toBuy: { label: 'À acheter', icon: 'cart', solid: false, get fg() { return COLORS.primary; }, get bg() { return COLORS.primarySoft; } },
+  missing: { label: 'Absent de la liste', icon: 'alert', solid: false, get fg() { return COLORS.dangerText; }, get bg() { return COLORS.dangerSoft; } },
 };
 
 export function AvailabilityIcon({ status, size = 26 }: { status: Availability; size?: number }) {
+  const styles = useStyles(makeStyles);
   const a = AVAILABILITY[status];
   return (
     <View
@@ -35,11 +38,12 @@ export function AvailabilityIcon({ status, size = 26 }: { status: Availability; 
 
 // Pastille compacte avec compteur (listes et carrousel de recettes)
 export function AvailabilityBadge({ status, count, label }: { status: Availability; count?: number; label?: string }) {
+  const styles = useStyles(makeStyles);
   const a = AVAILABILITY[status];
   const text = label ?? `${count ?? ''}`;
   return (
     <View
-      style={[styles.badge, { backgroundColor: a.solid ? '#E2EBE4' : a.bg }]}
+      style={[styles.badge, { backgroundColor: a.solid ? COLORS.greenSoft : a.bg }]}
       accessible
       accessibilityLabel={label ?? `${count} ${a.label.toLowerCase()}`}
     >
@@ -50,6 +54,7 @@ export function AvailabilityBadge({ status, count, label }: { status: Availabili
 }
 
 export function AvailabilityLegend() {
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.legend}>
       {(Object.keys(AVAILABILITY) as Availability[]).map((s) => (
@@ -62,7 +67,7 @@ export function AvailabilityLegend() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   icon: { alignItems: 'center', justifyContent: 'center' },
   badge: {
     flexDirection: 'row',

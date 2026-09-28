@@ -13,8 +13,10 @@ import { InfoCard, InfoField } from '../types';
 import { softColor } from '../constants/palette';
 import { formatRelative } from '../utils/time';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 export default function InfosScreen() {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const { user, profile } = useAuth();
   const householdId: string = profile?.householdId ?? '';
@@ -164,7 +166,7 @@ export default function InfosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.sm + 2 },
   empty: { fontSize: 15, fontWeight: '600', color: COLORS.textMuted, lineHeight: 21, paddingTop: SPACING.sm },

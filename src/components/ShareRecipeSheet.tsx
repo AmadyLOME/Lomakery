@@ -9,6 +9,7 @@ import Segmented from './Segmented';
 import { Recipe } from '../types';
 import { recipeToText, recipeToHtml } from '../utils/recipeShare';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -21,6 +22,7 @@ interface Props {
 type Format = 'text' | 'pdf';
 
 export default function ShareRecipeSheet({ visible, recipe, servings: initialServings, photoUri, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [format, setFormat] = useState<Format>('text');
   const [servings, setServings] = useState(initialServings);
   const [withIngredients, setWithIngredients] = useState(true);
@@ -128,7 +130,7 @@ export default function ShareRecipeSheet({ visible, recipe, servings: initialSer
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   subtitle: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted, marginTop: 2, marginBottom: SPACING.md },
   row: {

@@ -5,6 +5,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from './Text';
 import { COLORS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
   Home: 'home',
@@ -16,6 +17,7 @@ const ICONS: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
 
 // Barre d'onglets flottante : pilule vert foncé, onglet actif en pastille orange avec son libellé
 export default function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.bar, { bottom: Math.max(insets.bottom - 6, 16) }]}>
@@ -48,7 +50,7 @@ export default function FloatingTabBar({ state, descriptors, navigation }: Botto
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   bar: {
     position: 'absolute',
     left: 20,

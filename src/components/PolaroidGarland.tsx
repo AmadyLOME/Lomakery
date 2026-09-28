@@ -6,6 +6,7 @@ import { Text } from './Text';
 import { toDataUri } from '../services/photos';
 import { FamilyPhoto } from '../types';
 import { COLORS, FONTS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 const FRAME = 104;               // largeur d'un polaroïd
 const PHOTO = FRAME - 14;        // photo carrée dans le cadre
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export default function PolaroidGarland({ photos, animate, onPress }: Props) {
+  const styles = useStyles(makeStyles);
   const { width } = useWindowDimensions();
   const [offset, setOffset] = useState(0);
   const fade = useRef(new Animated.Value(1)).current;
@@ -93,6 +95,7 @@ interface PolaroidProps {
 }
 
 function Polaroid({ photo, left, top, pin, swing, animate }: PolaroidProps) {
+  const styles = useStyles(makeStyles);
   const sway = useRef(new Animated.Value(0)).current;
   const zoom = useRef(new Animated.Value(0)).current;
 
@@ -146,12 +149,12 @@ function Polaroid({ photo, left, top, pin, swing, animate }: PolaroidProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   hanger: { position: 'absolute', width: FRAME, transformOrigin: 'top' },
   pin: { position: 'absolute', top: -8, left: FRAME / 2 - 6, width: 12, height: 20, borderRadius: 3, zIndex: 2 },
   frame: {
     width: FRAME,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.paper,
     paddingTop: 7,
     paddingHorizontal: 7,
     shadowColor: '#3C280A',
@@ -160,7 +163,7 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     elevation: 6,
   },
-  photoBox: { width: PHOTO, height: PHOTO, overflow: 'hidden', backgroundColor: COLORS.sand },
+  photoBox: { width: PHOTO, height: PHOTO, overflow: 'hidden', backgroundColor: '#F1E8D6' },
   photo: { width: '100%', height: '100%' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   caption: {

@@ -5,6 +5,7 @@ import { Text } from './Text';
 import { Meal, SlotKey } from '../types';
 import { DAY_SHORT, dateOf, slotKey } from '../utils/weeks';
 import { COLORS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface SlotGridProps {
   weekId: string;
@@ -18,6 +19,7 @@ const MEALS: Meal[] = ['midi', 'soir'];
 
 // Grille 7 jours × midi/soir
 export default function SlotGrid({ weekId, selected, onToggle, disabled = [], busy = [] }: SlotGridProps) {
+  const styles = useStyles(makeStyles);
   return (
     <View style={styles.grid}>
       <View style={styles.labels}>
@@ -59,7 +61,7 @@ export default function SlotGrid({ weekId, selected, onToggle, disabled = [], bu
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   grid: { flexDirection: 'row', gap: 5 },
   labels: { width: 38, gap: 5 },
   col: { flex: 1, gap: 5 },

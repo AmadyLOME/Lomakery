@@ -5,6 +5,7 @@ import { Text } from './Text';
 import RoundButton from './RoundButton';
 import { COLORS, SPACING } from '../constants/theme';
 import { moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface ScreenHeaderProps {
   title: string;
@@ -15,6 +16,7 @@ interface ScreenHeaderProps {
 
 // Grand titre aligné à gauche, avec une action optionnelle à droite
 export default function ScreenHeader({ title, subtitle, right, onBack }: ScreenHeaderProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   return (
     <View style={[styles.container, { paddingTop: insets.top + SPACING.sm }]}>
@@ -32,7 +34,7 @@ export default function ScreenHeader({ title, subtitle, right, onBack }: ScreenH
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',

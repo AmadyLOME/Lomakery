@@ -3,6 +3,7 @@ import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Text } from '../components/Text';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, TAB_BAR_SPACE } from '../constants/theme';
 import { moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Section {
   id: string;
@@ -22,6 +23,10 @@ const SECTIONS: Section[] = [
     emoji: '✨',
     title: 'Quoi de neuf ?',
     content: [
+      {
+        question: 'Le mode sombre',
+        answer: 'Profil → Apparence : « Auto » suit le réglage clair / sombre de l\'iPhone, « Clair » et « Sombre » forcent l\'un ou l\'autre. Le choix est propre à chaque téléphone.',
+      },
       {
         question: 'Le mode « En magasin »',
         answer: 'Dans Courses, le bouton boutique en haut ouvre une liste plein écran des seuls articles à acheter, rayon par rayon dans l\'ordre de votre magasin, avec de gros ronds à cocher et une barre de progression. L\'écran reste allumé.',
@@ -276,6 +281,10 @@ const SECTIONS: Section[] = [
         answer: 'Touchez votre avatar en haut de l\'Accueil, puis « Se déconnecter » en bas du profil. Vos données restent sauvegardées dans le cloud.',
       },
       {
+        question: 'Passer en mode sombre',
+        answer: 'Dans le Profil (votre avatar en haut de l\'Accueil), section « Apparence » : Auto (suit l\'iPhone), Clair ou Sombre. Le changement est immédiat et ne concerne que ce téléphone.',
+      },
+      {
         question: 'Changer ma photo de profil',
         answer: 'Dans le profil, touchez votre avatar (pastille appareil photo) : prenez une photo ou choisissez-en une. Les autres membres la voient dans l\'app.',
       },
@@ -288,6 +297,7 @@ const SECTIONS: Section[] = [
 ];
 
 export default function HelpScreen() {
+  const styles = useStyles(makeStyles);
   const [openSections, setOpenSections] = useState<string[]>(['accueil']);
   const [openItems, setOpenItems] = useState<string[]>([]);
 
@@ -357,7 +367,7 @@ export default function HelpScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   hero: {
     alignItems: 'center',

@@ -43,6 +43,7 @@ import {
   weekIdOf,
 } from '../utils/weeks';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
+import { useStyles, useTheme } from '../theme/ThemeProvider';
 
 type WeekOffset = '-1' | '0' | '1';
 const MEALS: Meal[] = ['midi', 'soir'];
@@ -53,12 +54,21 @@ const WEEK_LABELS: Record<WeekOffset, string> = {
 };
 
 // Une couleur douce par plat, pour repérer ses différents repas d'un coup d'œil
-const DISH_COLORS = [
+const DISH_COLORS_LIGHT = [
   { bg: '#F9E2D3', fg: '#7A4A2E', ring: '#E0A77F' },
   { bg: '#E2EBE4', fg: '#3E6B4C', ring: '#8FB39A' },
   { bg: '#F6ECCF', fg: '#7A5A0E', ring: '#C9A54A' },
   { bg: '#E3E4F3', fg: '#3F4575', ring: '#9EA3D6' },
   { bg: '#F3DDE6', fg: '#7A3553', ring: '#D49AB4' },
+];
+
+// Même teintes, version sombre : fond foncé teinté, texte clair
+const DISH_COLORS_DARK = [
+  { bg: '#3E2B20', fg: '#F2B892', ring: '#A8704D' },
+  { bg: '#233629', fg: '#9FD2AE', ring: '#5E9470' },
+  { bg: '#3A321B', fg: '#E8C96A', ring: '#A88A3A' },
+  { bg: '#2A2E48', fg: '#B9BEF0', ring: '#6E74B0' },
+  { bg: '#3D2331', fg: '#F0A8C8', ring: '#A86A88' },
 ];
 
 interface EditorState {
@@ -68,6 +78,9 @@ interface EditorState {
 }
 
 export default function WeekMenuScreen() {
+  const styles = useStyles(makeStyles);
+  const { scheme } = useTheme();
+  const DISH_COLORS = scheme === 'dark' ? DISH_COLORS_DARK : DISH_COLORS_LIGHT;
   const { user, profile } = useAuth();
   const householdId: string = profile?.householdId ?? '';
 
@@ -533,7 +546,7 @@ export default function WeekMenuScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
   weekSwitch: { paddingHorizontal: SPACING.lg - 4, gap: 6, paddingBottom: SPACING.sm + 2 },

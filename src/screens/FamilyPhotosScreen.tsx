@@ -28,10 +28,12 @@ import { notify } from '../services/notifications';
 import { FamilyPhoto } from '../types';
 import { formatRelative } from '../utils/time';
 import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONTS, TAB_BAR_SPACE } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 const TILTS = [-2, 3, -3, 2, -1];
 
 export default function FamilyPhotosScreen() {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const { user, profile } = useAuth();
   const householdId: string = profile?.householdId ?? '';
@@ -155,7 +157,7 @@ export default function FamilyPhotosScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   content: { paddingHorizontal: SPACING.lg - 4, paddingBottom: TAB_BAR_SPACE, gap: SPACING.sm + 2 },
   card: {
@@ -169,7 +171,7 @@ const styles = StyleSheet.create({
   },
   polaroid: {
     width: 96,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.paper,
     paddingTop: 6,
     paddingHorizontal: 6,
     shadowColor: '#3C280A',
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 5,
   },
-  photoBox: { width: 84, height: 84, backgroundColor: COLORS.sand, overflow: 'hidden' },
+  photoBox: { width: 84, height: 84, backgroundColor: '#F1E8D6', overflow: 'hidden' },
   photo: { width: '100%', height: '100%' },
   busy: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
   polaroidCaption: { height: 26, lineHeight: 26, textAlign: 'center', fontFamily: FONTS.handwritten, fontSize: 16, color: '#3A3226' },
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     fontFamily: FONTS.handwritten,
     fontSize: 20,
-    color: '#3A3226',
+    color: COLORS.text,
   },
   meta: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
   actions: { flexDirection: 'row', gap: 6 },

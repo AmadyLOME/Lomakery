@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import FloatingTabBar from '../components/FloatingTabBar';
@@ -18,6 +18,23 @@ import NotesScreen from '../screens/NotesScreen';
 import InfosScreen from '../screens/InfosScreen';
 import FamilyPhotosScreen from '../screens/FamilyPhotosScreen';
 import { COLORS, FONT_SIZE, FONTS } from '../constants/theme';
+import { useTheme } from '../theme/ThemeProvider';
+
+// Thème de React Navigation (fonds pendant les transitions, en-têtes natifs)
+function navTheme(scheme: 'light' | 'dark') {
+  const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: COLORS.primary,
+      background: COLORS.background,
+      card: COLORS.background,
+      text: COLORS.text,
+      border: COLORS.border,
+    },
+  };
+}
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -25,10 +42,12 @@ const HomeStack = createNativeStackNavigator();
 
 // L'Accueil et tout ce qui s'ouvre depuis lui : mots, infos, profil (via l'avatar), aide
 function HomeNavigator() {
+  useTheme();
   return (
     <HomeStack.Navigator
       screenOptions={{
         headerShown: false,
+        contentStyle: { backgroundColor: COLORS.background },
         headerStyle: { backgroundColor: COLORS.background },
         headerTitleStyle: { fontFamily: FONTS.extrabold, color: COLORS.text, fontSize: FONT_SIZE.xl },
         headerShadowVisible: false,
@@ -47,6 +66,7 @@ function HomeNavigator() {
 }
 
 function MainTabs() {
+  useTheme();
   return (
     <Tab.Navigator
       tabBar={(props) => <FloatingTabBar {...props} />}
@@ -61,6 +81,7 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
+  const { scheme } = useTheme();
   const { user, profile, loading } = useAuth();
   const householdId: string | undefined = profile?.householdId;
 
@@ -77,8 +98,8 @@ export default function AppNavigator() {
   if (loading) return null;
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <NavigationContainer theme={navTheme(scheme)}>
+      <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.background } }}>
         {!user ? (
           <Stack.Screen name="Login" component={LoginScreen} />
         ) : !profile?.householdId ? (

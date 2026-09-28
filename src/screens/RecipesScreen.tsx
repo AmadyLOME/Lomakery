@@ -30,6 +30,7 @@ import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/list
 import { Recipe, RecipeIngredient, RecipeStep, ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
+import { useStyles } from '../theme/ThemeProvider';
 
 type IngredientStatus = Availability;
 type ViewMode = 'list' | 'carousel';
@@ -59,6 +60,7 @@ function getRecipeStats(recipe: Recipe, familyItems: ShoppingItem[]) {
 
 // Miniature de la photo dans la vue liste
 function RecipeThumb({ householdId, recipe }: { householdId: string; recipe: Recipe }) {
+  const styles = useStyles(makeStyles);
   const uri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
   if (!uri) return null;
   return <Image source={{ uri }} style={styles.thumb} />;
@@ -81,6 +83,7 @@ function IngredientPickerView({
   onSelect,
   onClose,
 }: IngredientPickerViewProps) {
+  const styles = useStyles(makeStyles);
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState('');
   const [qty, setQty] = useState('');
@@ -229,6 +232,7 @@ function cleanStep(s: RecipeStep): RecipeStep {
 }
 
 function RecipeDetailModal({ recipe, allRecipes, familyItems, familyGroups, householdId, userId, onClose }: RecipeDetailModalProps) {
+  const styles = useStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>(recipe.ingredients || []);
   const [steps, setSteps] = useState<RecipeStep[]>(recipe.steps || []);
@@ -579,7 +583,7 @@ function RecipeDetailModal({ recipe, allRecipes, familyItems, familyGroups, hous
                         <Text style={styles.stepText}>{s.text}</Text>
                         {s.timerMin ? (
                           <View style={styles.stepTimer}>
-                            <Ionicons name="timer-outline" size={13} color="#3F4575" />
+                            <Ionicons name="timer-outline" size={13} color={COLORS.indigo} />
                             <Text style={styles.stepTimerText}>{formatMinutes(s.timerMin)}</Text>
                           </View>
                         ) : null}
@@ -658,6 +662,7 @@ function RecipeDetailModal({ recipe, allRecipes, familyItems, familyGroups, hous
 // ─── Écran principal ──────────────────────────────────────────────────────────
 
 export default function RecipesScreen() {
+  const styles = useStyles(makeStyles);
   const { user, profile } = useAuth();
   const householdId = profile?.householdId ?? '';
 
@@ -918,7 +923,7 @@ export default function RecipesScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
   viewToggleRow: { paddingHorizontal: SPACING.lg - 4, paddingBottom: SPACING.sm + 2, gap: SPACING.sm + 2 },
@@ -1094,9 +1099,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: BORDER_RADIUS.full,
-    backgroundColor: '#E4E6F5',
+    backgroundColor: COLORS.indigoSoft,
   },
-  stepTimerText: { fontSize: 12, fontWeight: '800', color: '#3F4575' },
+  stepTimerText: { fontSize: 12, fontWeight: '800', color: COLORS.indigo },
   addStep: {
     flexDirection: 'row',
     alignItems: 'center',

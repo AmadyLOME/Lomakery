@@ -6,6 +6,7 @@ import BottomSheet from './BottomSheet';
 import { RecipeStep } from '../types';
 import { formatMinutes } from '../utils/quantities';
 import { COLORS, SPACING, BORDER_RADIUS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -21,6 +22,7 @@ interface Props {
 const TIMERS = [5, 10, 15, 20, 30, 45, 60, 90];
 
 export default function StepEditorSheet({ visible, step, index, total, onSave, onMove, onDelete, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [text, setText] = useState('');
   const [timer, setTimer] = useState<number | undefined>(undefined);
 
@@ -126,7 +128,7 @@ export default function StepEditorSheet({ visible, step, index, total, onSave, o
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text, marginBottom: SPACING.md },
   input: {
     minHeight: 110,
@@ -143,7 +145,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, fontWeight: '800', color: COLORS.text, marginTop: SPACING.md, marginBottom: SPACING.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: { minHeight: 36, paddingHorizontal: 12, borderRadius: BORDER_RADIUS.full, backgroundColor: COLORS.sand, justifyContent: 'center' },
-  chipOn: { backgroundColor: '#3F4575' },
+  chipOn: { backgroundColor: COLORS.ink },
   chipText: { fontSize: 13, fontWeight: '800', color: COLORS.textMuted },
   chipTextOn: { color: '#fff' },
   row: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md },

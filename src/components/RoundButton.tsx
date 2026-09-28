@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, SHADOWS } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface RoundButtonProps {
   icon: React.ComponentProps<typeof Ionicons>['name'];
@@ -14,6 +15,7 @@ interface RoundButtonProps {
 
 // Bouton rond à icône (44 px minimum pour le doigt)
 export default function RoundButton({ icon, label, onPress, variant = 'surface', size = 44, busy }: RoundButtonProps) {
+  const styles = useStyles(makeStyles);
   const primary = variant === 'primary';
   return (
     <TouchableOpacity
@@ -36,7 +38,7 @@ export default function RoundButton({ icon, label, onPress, variant = 'surface',
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   base: { alignItems: 'center', justifyContent: 'center' },
   surface: { backgroundColor: COLORS.surface, ...SHADOWS.soft },
   primary: {

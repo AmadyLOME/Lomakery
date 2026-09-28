@@ -6,6 +6,7 @@ import SlotGrid from './SlotGrid';
 import { SlotKey } from '../types';
 import { DAY_SHORT, parseSlot } from '../utils/weeks';
 import { COLORS, SPACING } from '../constants/theme';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface Props {
   visible: boolean;
@@ -25,6 +26,7 @@ export function slotLabel(slot: SlotKey): string {
 
 // « Sauté » : reporter le repas sur un autre créneau de la semaine, ou le sauter simplement
 export default function ReportMealSheet({ visible, weekId, dishName, slot, ownSlots, busySlots, onReport, onClose }: Props) {
+  const styles = useStyles(makeStyles);
   const [to, setTo] = useState<SlotKey | null>(null);
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function ReportMealSheet({ visible, weekId, dishName, slot, ownSl
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   body: { gap: SPACING.md - 4 },
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   subtitle: { fontSize: 14, fontWeight: '700', color: COLORS.textMuted, marginTop: -6 },

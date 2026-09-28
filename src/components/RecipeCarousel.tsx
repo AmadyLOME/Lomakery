@@ -8,6 +8,7 @@ import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } fro
 import { Ionicons } from '@expo/vector-icons';
 import { moderateScale } from '../utils/responsive';
 import { tagColor } from '../utils/tags';
+import { useStyles } from '../theme/ThemeProvider';
 
 interface RecipeStats {
   total: number;
@@ -27,6 +28,7 @@ interface RecipeCarouselProps {
 const CARD_GAP = SPACING.md;
 
 export default function RecipeCarousel({ recipes, householdId, getStats, onOpen, onDelete }: RecipeCarouselProps) {
+  const styles = useStyles(makeStyles);
   const { width } = useWindowDimensions();
   const [index, setIndex] = useState(0);
 
@@ -85,6 +87,7 @@ interface RecipeCardProps {
 }
 
 function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCardProps) {
+  const styles = useStyles(makeStyles);
   const photoUri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
   const allReady = stats.total > 0 && stats.missing === 0 && stats.available === stats.total;
 
@@ -142,7 +145,7 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = () => StyleSheet.create({
   tags: { position: 'absolute', left: 12, bottom: 12, right: 60, flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
   tag: { fontSize: 12, fontWeight: '800', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, overflow: 'hidden' },
   container: { flex: 1, paddingBottom: TAB_BAR_SPACE - 20 },
