@@ -18,13 +18,14 @@ via EAS Update.
 - expo-notifications + API push d'Expo (envoyée depuis le téléphone, sans backend)
 - expo-image-picker + expo-image-manipulator : photos en JPEG base64 **dans Firestore** (Firebase Storage exige
   l'offre Blaze)
+- expo-keep-awake (mode cuisine, mode magasin), expo-print + expo-sharing (fiche recette en PDF)
 - Polices : Nunito (interface) et Caveat (légendes des polaroïds), via `@expo-google-fonts`
 - Distribution : Expo Go + EAS Update, branche `production`, runtime `1.0.0`
 
 ## Structure
 
 ```
-App.tsx                  chargement des polices puis AppNavigator
+App.tsx                  chargement des polices et du réglage Apparence, puis ThemeProvider → AppNavigator
 firestore.rules          règles Firestore (source de vérité, voir « Déploiement »)
 src/
   navigation/            AppNavigator : Accueil (pile : Mots, Infos, Photos, Profil, Aide) · Courses · Recettes · Menu
@@ -38,6 +39,22 @@ src/
   constants/             theme (couleurs, arrondis, polices, TAB_BAR_SPACE), palette
   types/                 types partagés
 ```
+
+## Fonctionnalités (état actuel)
+
+- **Accueil** : guirlande de 5 polaroïds de famille, repas du jour (cuisiné / mangé), aperçu courses et menu, mur de
+  mots (épinglables), infos utiles (champs secrets masqués). Profil via l'avatar.
+- **Courses** : « À acheter » / « À la casa », rayons repliables, stock et seuil, ajout rapide avec suggestions,
+  bandeau « Annuler », ordre alphabétique. **Mode en magasin** (plein écran, écran allumé, progression) et **ordre
+  des rayons** (flèches ↑↓, commun au foyer, appliqué partout). Paramétrage : articles et rayons.
+- **Recettes** : liste ou carrousel, recherche (nom ou ingrédient) et filtre par étiquettes. Fiche : photo,
+  étiquettes, **portions** (quantités recalculées), onglets **Ingrédients | Étapes** (disponibilité de chaque
+  ingrédient, absents → courses ; durées, étapes avec minuteur), **mode cuisine**, **partage** (message ou PDF).
+- **Menu** : planning de la semaine midi / soir, date de cuisson, restes, mangé / sauté / reporté, menus enregistrés,
+  absents de la semaine → courses. 3 semaines conservées.
+- **Profil** : photo, foyer et code d'invitation, **Apparence Auto / Clair / Sombre** (propre au téléphone), aide.
+- **Notifications** : push à la famille (ajouts à acheter, stock bas…) ; notification locale en fin de minuteur.
+- **Aide intégrée** (`HelpScreen`) : à mettre à jour à chaque nouveauté, y compris « Quoi de neuf ? ».
 
 ## Données Firestore
 
@@ -81,7 +98,8 @@ l'ouverture du Menu.
   Ne jamais figer une couleur au chargement du module (tableau ou objet de haut niveau) : utiliser un getter ou
   `useTheme().scheme`. Toute nouvelle couleur = un jeton dans les deux palettes ; texte sur pastille moutarde / orange
   clair : `COLORS.onAccent`.
-- Vérifier avant de livrer : `npx tsc --noEmit` et `npx expo-doctor`.
+- Nouveau concept visuel : maquette validée (Artifact) avant de coder.
+- Vérifier avant de livrer : `npx tsc --noEmit` et `npx expo-doctor`. Mettre à jour l'aide intégrée et ce fichier.
 
 ## Développement et déploiement
 
@@ -97,46 +115,46 @@ l'ouverture du Menu.
 7. Sur les iPhones : Expo Go → Projects → Lomakery → production → ouvrir l'update la plus récente (les autres
    membres : QR code « Preview » du tableau de bord Expo).
 
-## Feuille de route
+## Historique des livraisons
 
-Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
-malignes » et « mode magasin et mode sombre ». Statut : **validées**. Livraison 1 (points 1 et 3) en production ;
-livraison 2 (points 4, 5, 7, 8) en production ; livraison 3 (point 2) en production ; mode sombre (point 6) en production.
+Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai). Toutes les livraisons ci-dessous
+sont **en production** (septembre 2026).
 
-1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
-   pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
-   (proposé d'après les autres recettes, sinon à choisir). Une feuille de confirmation liste ce qui va être fait.
-2. **Mode « En magasin »** — vue plein écran des seuls articles « À acheter », gros ronds à cocher, barre de
-   progression (8 / 15), écran maintenu allumé (`expo-keep-awake`), rayons dans l'**ordre du parcours magasin**
-   (nouveau champ `order` sur `familyGroups`, réglé par flèches ↑↓ plutôt que glisser-déposer, commun au foyer).
-3. **Ajout rapide dans Courses** — champ « + Ajouter » avec suggestions tirées des articles connus (passer « À
-   acheter », ou créer un nouvel article), et bandeau **« Annuler »** de quelques secondes après un cochage ou une
-   suppression.
-4. **Portions** — nombre de personnes de référence par recette (`servings`) et sélecteur « Pour N personnes » ;
-   les quantités numériques sont recalculées (« 1 kg » → « 1,5 kg »), le texte libre est affiché tel quel.
-5. **Étiquettes de recettes** — étiquettes libres par recette (`tags: string[]`) avec couleurs, filtre en pastilles
-   dans l'onglet Recettes (plus une recherche par nom ou ingrédient). Les étiquettes se choisissent / créent depuis la
-   fiche recette ; une gestion globale (renommer, supprimer) pourra venir plus tard.
-6. **Mode sombre** — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
-   AsyncStorage `appearance`) ; palettes `LIGHT_COLORS` / `DARK_COLORS` dans `theme.ts` (fond #141A14, surfaces
-   #1F2A20, orange éclairci pour le contraste). Le mode cuisine reste toujours sombre, les polaroïds gardent un papier
-   clair.
+| Livraison | Contenu | Message EAS Update |
+|---|---|---|
+| Accueil, photos, menu planifié | Accueil, polaroïds, mots, infos, planning midi / soir, menus enregistrés | — |
+| 1 | Du menu aux courses en un geste, ajout rapide dans Courses, bandeau « Annuler » | Livraison 1 : ajout rapide, Annuler, absents vers courses |
+| 2 | Portions, étiquettes + recherche, étapes + mode cuisine, partage (message / PDF) | Livraison 2 : portions, étiquettes, étapes, mode cuisine, partage |
+| 3 | Mode en magasin, ordre des rayons | Livraison 3 : mode en magasin et ordre des rayons |
+| Mode sombre | Réglage Apparence Auto / Clair / Sombre, palette sombre | Mode sombre : réglage Apparence (Auto / Clair / Sombre) |
 
-7. **Étapes de recette et mode cuisine** — onglet « Ingrédients | Étapes » dans la fiche recette ; étapes
-   numérotées et réordonnables (`steps: { id, text, timerMin? }[]`), durées de préparation / cuisson / marinade ;
-   « Mode cuisine » plein écran : une étape à la fois en grand, progression, ingrédients de l'étape (quantités selon
-   les portions), minuteur avec alerte (notification locale), écran maintenu allumé.
+Détails de conception à retenir :
 
-8. **Partager une recette** — bouton partager dans la fiche recette → feuille « Partager la recette » : format
-   « Message » (texte lisible dans WhatsApp, SMS, Mail) ou « Fiche PDF » (mise en page avec photo, via
-   `expo-print` + `expo-sharing`) ; choix des portions (quantités recalculées) et de ce qui est inclus
-   (ingrédients, étapes, photo) ; aperçu ; puis menu de partage natif iOS (`Share` pour le texte,
-   `Sharing.shareAsync` pour le PDF). Plus tard : lien
-   d'import pour qu'un autre foyer TeninGrocery ajoute la recette en un geste.
+- **Portions** : `servings` = nombre de personnes pour lequel les quantités sont saisies (4 par défaut). Le sélecteur
+  « Pour N personnes » n'est pas enregistré ; seul le premier nombre d'une quantité est recalculé
+  (`utils/quantities.ts` : décimales et fractions), le texte libre reste tel quel.
+- **Étiquettes** : `tags: string[]` libres, couleur dérivée du nom (`utils/tags.ts`), comparaison sans accents ni
+  majuscules. Choix / création depuis la fiche recette.
+- **Étapes** : `steps: { id, text, timerMin? }[]` (pas de `timerMin: undefined` dans Firestore), `prepMin`,
+  `cookMin`, `restMin`. Mode cuisine : toujours sombre, ingrédients de l'étape repérés par leur nom dans le texte,
+  minuteur = notification locale programmée + vibration.
+- **Partage** : texte via `Share.share` (gras WhatsApp `*…*`), PDF via `Print.printToFileAsync` (HTML de
+  `utils/recipeShare.ts`, photo en data URI) puis `Sharing.shareAsync`.
+- **Mode magasin** : articles non cochés + ceux cochés pendant la visite (barrés) ; cocher = « À la casa » pour tout
+  le foyer ; article avec seuil → quantité demandée. Ordre des rayons : champ `order` écrit en lot
+  (`setGroupOrder`) ; rayons sans `order` à la fin, par nom.
+- **Mode sombre** : réglage stocké dans AsyncStorage (`appearance`), lu avant le premier affichage ; palettes
+  `LIGHT_COLORS` / `DARK_COLORS` (fond #141A14, surfaces #1F2A20, orange éclairci) ; polaroïds sur papier clair ;
+  `app.json` → `userInterfaceStyle: automatic`.
 
-Plus tard : rappels de cuisson (notifications locales), vraie app (build EAS + TestFlight) avec hors-ligne complet,
-base Firebase de test, règles déployées par la Firebase CLI et vérifications automatiques, partage de la liste en
-texte, suggestions à partir de l'historique, Siri / widget iOS.
+## Prochaines idées
+
+- Gestion globale des étiquettes (renommer, supprimer) depuis le Profil.
+- Lien d'import pour qu'un autre foyer TeninGrocery ajoute une recette partagée en un geste.
+- Nom de fichier du PDF = nom de la recette (nécessite `expo-file-system`).
+- Rappels de cuisson (notifications locales), suggestions à partir de l'historique, partage de la liste en texte.
+- Vraie app (build EAS + TestFlight) avec hors-ligne complet, Siri / widget iOS.
+- Base Firebase de test, règles déployées par la Firebase CLI et vérifications automatiques.
 
 ## Limites connues
 
@@ -144,4 +162,6 @@ texte, suggestions à partir de l'historique, Siri / widget iOS.
 - Pas de notifications push sur Android dans Expo Go (SDK 53+).
 - Recette et production partagent la même base Firebase.
 - Règles Firestore publiées à la main (pas de Firebase CLI ni de CI).
+- Minuteur du mode cuisine : l'alerte hors de l'app exige l'autorisation des notifications sur l'iPhone.
+- Le PDF partagé porte un nom de fichier automatique.
 - Piste : vraie app via build EAS + TestFlight (compte Apple Developer).
