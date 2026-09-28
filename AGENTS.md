@@ -116,6 +116,12 @@ malignes » et « mode magasin et mode sombre ». Statut : **maquettes proposée
    « Mode cuisine » plein écran : une étape à la fois en grand, progression, ingrédients de l'étape (quantités selon
    les portions), minuteur avec alerte (notification locale), écran maintenu allumé.
 
+8. **Partager une recette** — bouton partager dans la fiche recette → feuille « Partager la recette » : format
+   « Message » (texte lisible dans WhatsApp, SMS, Mail) ou « Fiche PDF » (mise en page avec photo, via
+   `expo-print` + `expo-sharing`) ; choix des portions (quantités recalculées) et de ce qui est inclus
+   (ingrédients, étapes, photo) ; aperçu ; puis menu de partage natif iOS (`Share`). Plus tard : lien
+   d'import pour qu'un autre foyer TeninGrocery ajoute la recette en un geste.
+
 Plus tard : rappels de cuisson (notifications locales), vraie app (build EAS + TestFlight) avec hors-ligne complet,
 base Firebase de test, règles déployées par la Firebase CLI et vérifications automatiques, partage de la liste en
 texte, suggestions à partir de l'historique, Siri / widget iOS.
