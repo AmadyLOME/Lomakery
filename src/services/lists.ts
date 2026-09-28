@@ -94,6 +94,19 @@ export function addFamilyItem(householdId: string, item: Omit<ShoppingItem, 'id'
   return addItem(`households/${householdId}/familyList`, item);
 }
 
+// Crée plusieurs articles « À acheter » d'un coup (ingrédients absents d'une recette ou du menu)
+export async function addMissingItems(
+  householdId: string,
+  entries: { name: string; groupId?: string }[],
+  addedBy: string
+) {
+  await Promise.all(
+    entries.map(({ name, groupId }) =>
+      addFamilyItem(householdId, { name, groupId, category: 'autre', quantity: 1, checked: false, addedBy })
+    )
+  );
+}
+
 export function addPersonalItem(uid: string, item: Omit<ShoppingItem, 'id' | 'createdAt'>) {
   return addItem(`users/${uid}/personalList`, item);
 }

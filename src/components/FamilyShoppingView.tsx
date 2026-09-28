@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from './Text';
 import Segmented from './Segmented';
 import CollapseAllButton from './CollapseAllButton';
+import UndoToast, { useUndoToast } from './UndoToast';
+import { normalizeName, findItem } from '../utils/ingredients';
 import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
@@ -16,23 +18,67 @@ interface Props {
   onCheckWithStock: (itemId: string, addedQty: number, currentStock: number, threshold: number) => void;
   onDecrement: (item: ShoppingItem) => void;
   onIncrement: (item: ShoppingItem) => void;
+  onQuickCreate: (name: string) => Promise<string>;   // crée un article « À acheter », renvoie son id
+  onDelete: (itemId: string) => void;
 }
 
 type ActiveView = 'acheter' | 'dispo';
 
-export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement }: Props) {
+export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement, onQuickCreate, onDelete }: Props) {
   const [activeView, setActiveView] = useState<ActiveView>('acheter');
   const [search, setSearch] = useState('');
   const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:courses');
+  const { toast, show: showToast, hide: hideToast } = useUndoToast();
 
   const aAcheter = items.filter((i) => !i.checked);
   const disponible = items.filter((i) => i.checked);
   const displayed = activeView === 'acheter' ? aAcheter : disponible;
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return q ? displayed.filter((i) => i.name.toLowerCase().includes(q)) : displayed;
+    const q = normalizeName(search);
+    return q ? displayed.filter((i) => normalizeName(i.name).includes(q)) : displayed;
   }, [displayed, search]);
+
+  // ── Ajout rapide : suggestions pendant la saisie ──────────────────────────
+  const query = search.trim();
+  const exact = query ? findItem(query, items) : undefined;
+  // Articles de l'autre vue qui correspondent (ex. « Lait » à la casa quand on est dans « À acheter »)
+  const otherViewMatches = query
+    ? items
+        .filter((i) => (activeView === 'acheter' ? i.checked : !i.checked))
+        .filter((i) => normalizeName(i.name).includes(normalizeName(query)))
+        .slice(0, 3)
+    : [];
+
+  const toggleWithUndo = (item: ShoppingItem, checked: boolean) => {
+    onToggle(item.id, checked);
+    showToast(
+      checked ? `« ${item.name} » passé à la casa` : `« ${item.name} » remis à acheter`,
+      () => onToggle(item.id, !checked)
+    );
+  };
+
+  const quickCreate = async (name: string) => {
+    setSearch('');
+    try {
+      const id = await onQuickCreate(name);
+      showToast(`« ${name} » ajouté à acheter (rayon Autres)`, () => onDelete(id));
+    } catch (e: any) {
+      Alert.alert('Erreur', "L'article n'a pas pu être ajouté.\n" + (e?.message ?? ''));
+    }
+  };
+
+  // Touche Entrée : met l'article existant dans la vue affichée, sinon le crée « À acheter »
+  const submitQuick = () => {
+    if (!query) return;
+    if (exact) {
+      const wanted = activeView === 'dispo';
+      if (exact.checked !== wanted) toggleWithUndo(exact, wanted);
+      setSearch('');
+    } else {
+      quickCreate(query);
+    }
+  };
 
   const grouped = groups
     .map((g) => ({ group: g, groupItems: filtered.filter((i) => i.groupId === g.id) }))
@@ -62,7 +108,7 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
         'numeric'
       );
     } else {
-      onToggle(item.id, !item.checked);
+      toggleWithUndo(item, !item.checked);
     }
   }
 
@@ -158,18 +204,57 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
         />
       </View>
 
-      {/* Barre de recherche */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={18} color={COLORS.textSecondary} />
+      {/* Rechercher ou ajouter */}
+      <View style={[styles.searchBox, query ? styles.searchBoxActive : null]}>
+        <Ionicons name={query ? 'add' : 'search'} size={19} color={query ? COLORS.primary : COLORS.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Rechercher un article…"
+          placeholder="Rechercher ou ajouter un article…"
           placeholderTextColor={COLORS.textSecondary}
           value={search}
           onChangeText={setSearch}
+          onSubmitEditing={submitQuick}
+          returnKeyType={exact ? 'done' : 'go'}
           clearButtonMode="while-editing"
+          autoCorrect={false}
         />
       </View>
+
+      {query ? (
+        <View style={styles.suggestions}>
+          {otherViewMatches.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              style={styles.suggestion}
+              onPress={() => { toggleWithUndo(item, activeView === 'dispo'); setSearch(''); }}
+              accessibilityRole="button"
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.suggestionName}>{item.name}</Text>
+                <Text style={styles.suggestionMeta}>
+                  {(groups.find((g) => g.id === item.groupId)?.name ?? 'Autres')} · {item.checked ? 'à la casa' : 'à acheter'}
+                </Text>
+              </View>
+              <View style={styles.suggestionAction}>
+                <Text style={styles.suggestionActionText}>
+                  {activeView === 'acheter' ? 'Mettre à acheter' : 'Passer à la casa'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+          {!exact && (
+            <TouchableOpacity style={styles.suggestion} onPress={() => quickCreate(query)} accessibilityRole="button">
+              <View style={{ flex: 1 }}>
+                <Text style={styles.suggestionName}>« {query} »</Text>
+                <Text style={styles.suggestionMeta}>Nouvel article, ajouté à acheter</Text>
+              </View>
+              <View style={[styles.suggestionAction, { backgroundColor: COLORS.ink }]}>
+                <Text style={[styles.suggestionActionText, { color: '#fff' }]}>+ Créer</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : null}
 
       <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
         {filtered.length === 0 ? (
@@ -200,6 +285,8 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
           </>
         )}
       </ScrollView>
+
+      <UndoToast toast={toast} onHide={hideToast} />
     </View>
   );
 }
@@ -221,6 +308,29 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.full,
     ...SHADOWS.soft,
   },
+  searchBoxActive: { borderWidth: 2, borderColor: COLORS.primary },
+  suggestions: {
+    marginHorizontal: SPACING.lg - 4,
+    marginTop: -SPACING.sm,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.surface,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...SHADOWS.soft,
+  },
+  suggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.sm + 3,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.sand,
+  },
+  suggestionName: { fontSize: 15, fontWeight: '800', color: COLORS.text },
+  suggestionMeta: { fontSize: 12, fontWeight: '700', color: COLORS.textSecondary },
+  suggestionAction: { backgroundColor: '#F9E2D3', borderRadius: BORDER_RADIUS.full, paddingHorizontal: 11, paddingVertical: 6 },
+  suggestionActionText: { fontSize: 13, fontWeight: '800', color: COLORS.primaryDark },
   searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: SPACING.sm + 2 },
 
   listToolbar: {

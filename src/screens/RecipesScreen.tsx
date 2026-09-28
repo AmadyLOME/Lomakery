@@ -12,6 +12,10 @@ import RecipeCarousel from '../components/RecipeCarousel';
 import CollapseAllButton from '../components/CollapseAllButton';
 import { Availability, AvailabilityIcon, AvailabilityBadge, AvailabilityLegend } from '../components/Availability';
 import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
+import { ingredientStatus, normalizeName, collectMissing } from '../utils/ingredients';
+import MissingToCartSheet from '../components/MissingToCartSheet';
+import { addMissingItems } from '../services/lists';
+import { notify, senderName } from '../services/notifications';
 import ScreenHeader from '../components/ScreenHeader';
 import RoundButton from '../components/RoundButton';
 import Segmented from '../components/Segmented';
@@ -26,11 +30,7 @@ type ViewMode = 'list' | 'carousel';
 const VIEW_MODE_KEY = 'recipes:viewMode';
 
 function getIngredientStatus(name: string, familyItems: ShoppingItem[]): IngredientStatus {
-  const match = familyItems.find(
-    (i) => i.name.toLowerCase().trim() === name.toLowerCase().trim()
-  );
-  if (!match) return 'missing';
-  return match.checked ? 'available' : 'toBuy';
+  return ingredientStatus(name, familyItems);
 }
 
 function statusColor(status: IngredientStatus): string {
@@ -79,12 +79,12 @@ function IngredientPickerView({
   const [qty, setQty] = useState('');
   const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:picker');
 
-  const existingNames = existingIngredients.map((i) => i.name.toLowerCase().trim());
+  const existingNames = existingIngredients.map((i) => normalizeName(i.name));
 
   const filtered = familyItems.filter(
     (item) =>
-      item.name.toLowerCase().includes(search.toLowerCase()) &&
-      !existingNames.includes(item.name.toLowerCase().trim())
+      normalizeName(item.name).includes(normalizeName(search)) &&
+      !existingNames.includes(normalizeName(item.name))
   );
 
   const noResults = search.trim().length > 0 && filtered.length === 0;
@@ -210,7 +210,17 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>(recipe.ingredients || []);
   const [showPicker, setShowPicker] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [showMissing, setShowMissing] = useState(false);
   const photoUri = useRecipePhoto(householdId, recipe.id, recipe.photoUpdatedAt);
+  const missing = collectMissing([{ name: recipe.name, ingredients }], familyItems);
+
+  const addMissing = async (entries: { name: string; groupId?: string }[]) => {
+    await addMissingItems(householdId, entries, userId);
+    setShowMissing(false);
+    if (entries.length > 0) {
+      notify(householdId, '🛒 À acheter', `${senderName()} a ajouté ${entries.length} article${entries.length > 1 ? 's' : ''} pour « ${recipe.name} »`);
+    }
+  };
 
   const changePhoto = () => {
     const upload = async (source: PhotoSource) => {
@@ -328,6 +338,24 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
             <View style={styles.legend}>
               <AvailabilityLegend />
             </View>
+
+            {missing.rows.length > 0 && (
+              <TouchableOpacity style={styles.missingBtn} onPress={() => setShowMissing(true)} accessibilityRole="button">
+                <Ionicons name="cart" size={18} color="#fff" />
+                <Text style={styles.missingBtnText}>
+                  Ajouter {missing.rows.length === 1 ? "l'absent" : `les ${missing.rows.length} absents`} aux courses
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <MissingToCartSheet
+              visible={showMissing}
+              rows={missing.rows}
+              alreadyToBuy={missing.alreadyToBuy}
+              groups={familyGroups}
+              onConfirm={addMissing}
+              onClose={() => setShowMissing(false)}
+            />
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
               {ingredients.length === 0 && (
@@ -672,6 +700,18 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
   },
 
+  missingBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    minHeight: 48,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.sm + 2,
+    borderRadius: 24,
+    backgroundColor: COLORS.primary,
+  },
+  missingBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   legend: {
     flexDirection: 'row',
     flexWrap: 'wrap',

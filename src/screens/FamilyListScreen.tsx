@@ -97,6 +97,10 @@ export default function FamilyListScreen({ route }: any) {
           onCheckWithStock={(id, addedQty, currentStock, threshold) => checkItemWithStock(collectionPath, id, addedQty, currentStock, threshold)}
           onDecrement={handleDecrement}
           onIncrement={(item) => incrementStock(collectionPath, item)}
+          onQuickCreate={(name) =>
+            handleAddItem({ name, category: 'autre', quantity: 1, checked: false, addedBy: user.uid })
+          }
+          onDelete={(id) => deleteItem(collectionPath, id)}
         />
       ) : (
         <FamilySettings

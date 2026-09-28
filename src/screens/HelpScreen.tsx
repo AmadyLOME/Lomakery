@@ -77,8 +77,12 @@ const SECTIONS: Section[] = [
         answer: 'La vue "À acheter" regroupe tout ce qu\'il faut aller chercher. La vue "À la casa" liste ce que vous avez déjà à la maison. Appuyez sur la checkbox d\'un article pour le déplacer d\'une liste à l\'autre.',
       },
       {
-        question: 'Rechercher un article',
-        answer: 'La barre « Rechercher un article… » sous le sélecteur filtre la vue affichée (À acheter ou À la casa) au fur et à mesure que vous tapez.',
+        question: 'Rechercher ou ajouter un article',
+        answer: 'Le champ « Rechercher ou ajouter un article… » filtre la liste pendant que vous tapez (sans tenir compte des accents). Il propose aussi de remettre à acheter un article qui est à la casa, ou de créer « … » s\'il n\'existe pas (rangé dans « Autres »). La touche Entrée fait l\'action directement.',
+      },
+      {
+        question: 'Annuler une erreur',
+        answer: 'Après avoir coché un article ou en avoir créé un, un bandeau « Annuler » s\'affiche quelques secondes en bas de l\'écran : touchez-le pour revenir en arrière.',
       },
       {
         question: 'Comment cocher un article ?',
@@ -153,6 +157,10 @@ const SECTIONS: Section[] = [
       {
         question: 'Modifier la quantité d\'un ingrédient',
         answer: 'Dans le détail d\'une recette, appuyez sur l\'ingrédient (icône ✏️). Une boîte de dialogue s\'ouvre pour modifier la quantité.',
+      },
+      {
+        question: 'Ajouter les ingrédients absents aux courses',
+        answer: 'Dans une recette, le bouton « Ajouter les absents aux courses » crée d\'un coup les ingrédients qui ne sont pas encore dans votre liste, « À acheter », dans le rayon de votre choix. Le même bouton existe dans le Menu pour tous les plats de la semaine.',
       },
       {
         question: 'Article non trouvé dans la liste ?',

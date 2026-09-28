@@ -9,6 +9,9 @@ import MenuEntrySheet from '../components/MenuEntrySheet';
 import SavedMenusSheet from '../components/SavedMenusSheet';
 import ReportMealSheet, { slotLabel } from '../components/ReportMealSheet';
 import { cookStatus } from '../utils/menuDisplay';
+import { normalizeName, collectMissing } from '../utils/ingredients';
+import MissingToCartSheet from '../components/MissingToCartSheet';
+import { addMissingItems } from '../services/lists';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToRecipes } from '../services/recipes';
 import { subscribeToFamilyList, subscribeToFamilyGroups } from '../services/lists';
@@ -79,6 +82,7 @@ export default function WeekMenuScreen() {
   const [editor, setEditor] = useState<EditorState>({ visible: false, initial: null, presetSlot: null });
   const [showSaved, setShowSaved] = useState(false);
   const [showMissing, setShowMissing] = useState(false);
+  const [showAbsent, setShowAbsent] = useState(false);
   const [report, setReport] = useState<{ entry: MenuEntry; slot: SlotKey } | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -117,14 +121,28 @@ export default function WeekMenuScreen() {
   // Articles « À acheter » dont le nom figure dans les ingrédients des plats de la semaine
   const missingItems = useMemo(() => {
     const names = new Set(
-      entries.flatMap((e) => (recipeOf(e.recipeId)?.ingredients ?? []).map((i) => i.name.toLowerCase().trim()))
+      entries.flatMap((e) => (recipeOf(e.recipeId)?.ingredients ?? []).map((i) => normalizeName(i.name)))
     );
-    return familyItems.filter((item) => !item.checked && names.has(item.name.toLowerCase().trim()));
+    return familyItems.filter((item) => !item.checked && names.has(normalizeName(item.name)));
   }, [entries, recipes, familyItems]);
 
   // Créneaux occupés par les autres plats (indiqués dans les grilles)
   const busySlotsExcept = (entryId: string | null) =>
     placed.filter((e) => e.id !== entryId).flatMap((e) => activeSlots(e));
+
+  // Ingrédients des plats de la semaine absents de la liste de courses
+  const absent = useMemo(
+    () => collectMissing(entries.map((e) => recipeOf(e.recipeId)).filter((r): r is Recipe => !!r), familyItems),
+    [entries, recipes, familyItems]
+  );
+
+  const addAbsent = async (items: { name: string; groupId?: string }[]) => {
+    await addMissingItems(householdId, items, user?.uid ?? '');
+    setShowAbsent(false);
+    if (items.length > 0) {
+      notify(householdId, '🛒 À acheter', `${senderName()} a ajouté ${items.length} article${items.length > 1 ? 's' : ''} pour le menu`);
+    }
+  };
 
   // Jours où il reste un plat à cuisiner
   const cookDays = new Set(placed.filter((e) => !e.cooked).map((e) => e.cookDay));
@@ -370,14 +388,25 @@ export default function WeekMenuScreen() {
       </View>
 
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE }}>
+        {/* Ingrédients absents de la liste : les ajouter en un geste */}
+        {absent.rows.length > 0 && (
+          <TouchableOpacity style={styles.absentPill} onPress={() => setShowAbsent(true)} accessibilityRole="button">
+            <Ionicons name="alert-circle" size={18} color="#fff" />
+            <Text style={styles.absentPillText}>
+              {absent.rows.length} ingrédient{absent.rows.length > 1 ? 's' : ''} absent{absent.rows.length > 1 ? 's' : ''} de la liste
+            </Text>
+            <Text style={styles.absentPillAction}>Ajouter ›</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Articles à acheter */}
         {entries.length > 0 && (
-          missingItems.length === 0 ? (
+          missingItems.length === 0 ? (absent.rows.length > 0 ? null : (
             <View style={[styles.missingPill, { backgroundColor: COLORS.greenSoft }]}>
               <Ionicons name="checkmark-circle" size={18} color={COLORS.green} />
               <Text style={[styles.missingPillText, { color: COLORS.green }]}>Tout est à la casa pour ces plats</Text>
             </View>
-          ) : (
+          )) : (
             <TouchableOpacity
               style={styles.missingPill}
               onPress={() => setShowMissing((v) => !v)}
@@ -476,6 +505,15 @@ export default function WeekMenuScreen() {
         onClose={() => setReport(null)}
       />
 
+      <MissingToCartSheet
+        visible={showAbsent}
+        rows={absent.rows}
+        alreadyToBuy={absent.alreadyToBuy}
+        groups={familyGroups}
+        onConfirm={addAbsent}
+        onClose={() => setShowAbsent(false)}
+      />
+
       <SavedMenusSheet
         visible={showSaved}
         householdId={householdId}
@@ -515,6 +553,19 @@ const styles = StyleSheet.create({
   dayPillDate: { fontSize: 16, fontWeight: '800', color: COLORS.text },
   cookDot: { position: 'absolute', bottom: 5, width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
 
+  absentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm + 2,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.sm + 2,
+    minHeight: 46,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
+  absentPillText: { flex: 1, fontSize: 14, fontWeight: '800', color: '#fff' },
+  absentPillAction: { fontSize: 14, fontWeight: '800', color: '#fff' },
   missingPill: {
     flexDirection: 'row',
     alignItems: 'center',
