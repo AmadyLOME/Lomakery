@@ -148,7 +148,7 @@ const SECTIONS: Section[] = [
       },
       {
         question: 'Ajouter des ingrédients',
-        answer: 'Ouvrez une recette et appuyez sur le bouton +. Un écran s\'ouvre avec vos articles classés par groupe. Saisissez une quantité (optionnel) et sélectionnez l\'article. La couleur indique sa disponibilité : 🟢 à la casa, ⚪ en liste à acheter.',
+        answer: 'Ouvrez une recette et appuyez sur le bouton +. Un écran s\'ouvre avec vos articles classés par groupe. Saisissez une quantité (optionnel) et sélectionnez l\'article. La pastille indique sa disponibilité : coche verte = à la casa, caddie orange = à acheter (déjà dans la liste), point d\'exclamation rouge = absent de la liste de courses.',
       },
       {
         question: 'Modifier la quantité d\'un ingrédient',

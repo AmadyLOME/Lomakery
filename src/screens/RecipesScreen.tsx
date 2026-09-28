@@ -3,13 +3,15 @@ import { View, FlatList, TouchableOpacity, Alert, Modal, StyleSheet, KeyboardAvo
 import { Text, TextInput } from '../components/Text';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../hooks/useAuth';
 import { subscribeToRecipes, addRecipe, deleteRecipe, updateRecipeIngredients, setRecipePhoto } from '../services/recipes';
 import { pickPhoto, askPhotoSource, RECIPE_PHOTO_OPTIONS, PhotoSource } from '../services/photos';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
 import RecipeCarousel from '../components/RecipeCarousel';
+import CollapseAllButton from '../components/CollapseAllButton';
+import { Availability, AvailabilityIcon, AvailabilityBadge, AvailabilityLegend } from '../components/Availability';
+import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
 import ScreenHeader from '../components/ScreenHeader';
 import RoundButton from '../components/RoundButton';
 import Segmented from '../components/Segmented';
@@ -18,7 +20,7 @@ import { Recipe, RecipeIngredient, ShoppingItem, ShoppingGroup } from '../types'
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
 
-type IngredientStatus = 'available' | 'missing' | 'unknown';
+type IngredientStatus = Availability;
 type ViewMode = 'list' | 'carousel';
 
 const VIEW_MODE_KEY = 'recipes:viewMode';
@@ -28,7 +30,13 @@ function getIngredientStatus(name: string, familyItems: ShoppingItem[]): Ingredi
     (i) => i.name.toLowerCase().trim() === name.toLowerCase().trim()
   );
   if (!match) return 'missing';
-  return match.checked ? 'available' : 'unknown';
+  return match.checked ? 'available' : 'toBuy';
+}
+
+function statusColor(status: IngredientStatus): string {
+  if (status === 'available') return COLORS.green;
+  if (status === 'missing') return COLORS.dangerText;
+  return COLORS.primaryDark;
 }
 
 function getRecipeStats(recipe: Recipe, familyItems: ShoppingItem[]) {
@@ -37,6 +45,7 @@ function getRecipeStats(recipe: Recipe, familyItems: ShoppingItem[]) {
   return {
     total: ings.length,
     available: statuses.filter((st) => st === 'available').length,
+    toBuy: statuses.filter((st) => st === 'toBuy').length,
     missing: statuses.filter((st) => st === 'missing').length,
   };
 }
@@ -68,15 +77,7 @@ function IngredientPickerView({
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState('');
   const [qty, setQty] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
-
-  function toggleGroup(id: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:picker');
 
   const existingNames = existingIngredients.map((i) => i.name.toLowerCase().trim());
 
@@ -104,13 +105,7 @@ function IngredientPickerView({
 
   const renderItem = (item: ShoppingItem) => {
     const status = getIngredientStatus(item.name, familyItems);
-    const color =
-      status === 'available' ? COLORS.green :
-      status === 'missing' ? COLORS.danger :
-      COLORS.textSecondary;
-    const icon =
-      status === 'available' ? '🟢' :
-      status === 'missing' ? '🔴' : '⚪';
+    const color = statusColor(status);
 
     return (
       <TouchableOpacity
@@ -118,7 +113,7 @@ function IngredientPickerView({
         style={styles.suggestionRow}
         onPress={() => onSelect(item.name, qty)}
       >
-        <Text style={styles.statusIcon}>{icon}</Text>
+        <View style={styles.statusIcon}><AvailabilityIcon status={status} /></View>
         <Text style={[styles.suggestionName, { color }]}>{item.name}</Text>
         {item.unit ? <Text style={styles.suggestionUnit}>{item.unit}</Text> : null}
       </TouchableOpacity>
@@ -157,6 +152,15 @@ function IngredientPickerView({
         />
       </View>
 
+      {!search.trim() && grouped.length > 1 && (
+        <View style={styles.pickerToolbar}>
+          <CollapseAllButton
+            allCollapsed={allCollapsed(grouped.map((g) => g.group?.id ?? '__ungrouped'))}
+            onPress={() => toggleAll(grouped.map((g) => g.group?.id ?? '__ungrouped'))}
+          />
+        </View>
+      )}
+
       <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1 }}>
         {noResults && (
           <Text style={styles.pickerHint}>Aucun article trouvé pour « {search.trim()} »</Text>
@@ -164,7 +168,7 @@ function IngredientPickerView({
 
         {grouped.map(({ group, items }) => {
           const groupId = group?.id ?? '__ungrouped';
-          const isCollapsed = collapsedGroups.has(groupId);
+          const isCollapsed = !search.trim() && collapsedGroups.has(groupId);
           return (
             <View key={groupId}>
               {group && (
@@ -271,21 +275,14 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
     );
   };
 
-  const statusColor = (status: IngredientStatus) => {
-    if (status === 'available') return COLORS.green;
-    if (status === 'missing') return COLORS.danger;
-    return COLORS.textSecondary;
-  };
-
-  const statusIcon = (status: IngredientStatus) => {
-    if (status === 'available') return '🟢';
-    if (status === 'missing') return '🔴';
-    return '⚪';
-  };
-
   return (
-    <Modal visible animationType="slide" onRequestClose={showPicker ? () => setShowPicker(false) : onClose}>
-      <SafeAreaView style={styles.modalContainer}>
+    <Modal
+      visible
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={showPicker ? () => setShowPicker(false) : onClose}
+    >
+      <View style={styles.modalContainer}>
         {showPicker ? (
           // Vue picker inline — pas de second Modal
           <IngredientPickerView
@@ -329,9 +326,7 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
             ) : null}
 
             <View style={styles.legend}>
-              <Text style={styles.legendText}>🟢 À la casa</Text>
-              <Text style={styles.legendText}>🔴 Absent → courses</Text>
-              <Text style={styles.legendText}>⚪ En liste</Text>
+              <AvailabilityLegend />
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 16 }}>
@@ -346,7 +341,7 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
                     style={styles.ingredientRow}
                     onPress={() => editIngredientQty(ing)}
                   >
-                    <Text style={styles.statusIcon}>{statusIcon(status)}</Text>
+                    <View style={styles.statusIcon}><AvailabilityIcon status={status} /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.ingredientName, { color: statusColor(status) }]}>
                         {ing.name}
@@ -374,7 +369,7 @@ function RecipeDetailModal({ recipe, familyItems, familyGroups, householdId, use
             </View>
           </>
         )}
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
@@ -477,7 +472,7 @@ export default function RecipesScreen() {
           keyExtractor={(r) => r.id}
           contentContainerStyle={{ paddingHorizontal: SPACING.lg - 4, paddingTop: SPACING.xs, paddingBottom: TAB_BAR_SPACE }}
           renderItem={({ item }) => {
-            const { total, available, missing } = getRecipeStats(item, familyItems);
+            const { total, available, toBuy, missing } = getRecipeStats(item, familyItems);
 
             return (
               <TouchableOpacity style={styles.recipeCard} onPress={() => setSelectedRecipe(item)}>
@@ -489,14 +484,9 @@ export default function RecipesScreen() {
                   ) : null}
                   {total > 0 && (
                     <View style={styles.recipeBadges}>
-                      <Text style={[styles.badge, { backgroundColor: COLORS.green + '22', color: COLORS.green }]}>
-                        🟢 {available}
-                      </Text>
-                      {missing > 0 && (
-                        <Text style={[styles.badge, { backgroundColor: COLORS.danger + '22', color: COLORS.danger }]}>
-                          🔴 {missing}
-                        </Text>
-                      )}
+                      {available > 0 && <AvailabilityBadge status="available" count={available} />}
+                      {toBuy > 0 && <AvailabilityBadge status="toBuy" count={toBuy} />}
+                      {missing > 0 && <AvailabilityBadge status="missing" count={missing} />}
                       <Text style={[styles.badge, { backgroundColor: COLORS.border, color: COLORS.textSecondary }]}>
                         {total} ing.
                       </Text>
@@ -702,7 +692,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  statusIcon: { fontSize: 18, marginRight: SPACING.sm },
+  statusIcon: { marginRight: SPACING.sm + 2 },
   ingredientName: { fontSize: FONT_SIZE.lg, fontWeight: '600' },
   ingredientQty: { fontSize: FONT_SIZE.sm, color: COLORS.textSecondary, marginTop: 2 },
   ingredientQtyEmpty: { fontSize: FONT_SIZE.sm, color: COLORS.border, marginTop: 2, fontStyle: 'italic' },
@@ -791,6 +781,7 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   pickerQtyLabel: { fontSize: FONT_SIZE.md, color: COLORS.textSecondary },
+  pickerToolbar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm },
   pickerSearchRow: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,

@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, Modal, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, FlatList, TouchableOpacity, StyleSheet, Alert, ScrollView } from 'react-native';
+import BottomSheet from './BottomSheet';
+import CollapseAllButton from './CollapseAllButton';
+import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from './Text';
 import { ShoppingItem, ShoppingGroup } from '../types';
@@ -26,7 +29,7 @@ export default function FamilySettings({
   const [itemModalVisible, setItemModalVisible] = useState(false);
   const [itemModalMode, setItemModalMode] = useState<ItemModalMode>('add');
   const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:parametrage');
 
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [selectedGroupId, setSelectedGroupId] = useState('');
@@ -51,13 +54,7 @@ export default function FamilySettings({
     );
   }
 
-  function toggleGroup(id: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  const groupIds = groups.map((g) => g.id);
 
   function openAddItem(groupId: string) {
     setItemModalMode('add');
@@ -149,6 +146,12 @@ export default function FamilySettings({
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: TAB_BAR_SPACE + 60 }}>
+        {groups.length > 1 && (
+          <View style={styles.listToolbar}>
+            <Text style={styles.toolbarText}>{groups.length} groupes · {items.length} articles</Text>
+            <CollapseAllButton allCollapsed={allCollapsed(groupIds)} onPress={() => toggleAll(groupIds)} />
+          </View>
+        )}
         {groups.map((group) => {
           const groupItems = items.filter((i) => i.groupId === group.id);
           const isCollapsed = collapsedGroups.has(group.id);
@@ -222,130 +225,125 @@ export default function FamilySettings({
       </TouchableOpacity>
 
       {/* Modal nouveau groupe */}
-      <Modal visible={groupModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>Nouveau groupe</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Ex: Poissonnerie, Boucherie…"
-              value={newGroupName}
-              onChangeText={setNewGroupName}
-              autoFocus
-            />
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={() => setGroupModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAddGroup}>
-                <Text style={styles.addButtonText}>Créer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      <BottomSheet visible={groupModalVisible} onClose={() => setGroupModalVisible(false)}>
+        <Text style={styles.modalTitle}>Nouveau groupe</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Ex: Poissonnerie, Boucherie…"
+          value={newGroupName}
+          onChangeText={setNewGroupName}
+          autoFocus
+        />
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => setGroupModalVisible(false)}
+          >
+            <Text style={styles.cancelButtonText}>Annuler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleAddGroup}>
+            <Text style={styles.addButtonText}>Créer</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
 
       {/* Modal ajouter / modifier article */}
-      <Modal visible={itemModalVisible} animationType="slide" transparent>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modal}>
-            <Text style={styles.modalTitle}>
-              {itemModalMode === 'edit' ? 'Modifier l\'article' : 'Ajouter un article'}
+      <BottomSheet visible={itemModalVisible} onClose={() => setItemModalVisible(false)}>
+        <Text style={styles.modalTitle}>
+          {itemModalMode === 'edit' ? 'Modifier l\'article' : 'Ajouter un article'}
+        </Text>
+
+        {/* Sélecteur de groupe */}
+        <Text style={styles.fieldLabel}>Groupe</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupChipsRow}>
+          <TouchableOpacity
+            style={[styles.groupChip, !selectedGroupId && styles.groupChipActive]}
+            onPress={() => setSelectedGroupId('')}
+          >
+            <Text style={[styles.groupChipText, !selectedGroupId && styles.groupChipTextActive]}>
+              Aucun
             </Text>
+          </TouchableOpacity>
+          {groups.map((g) => (
+            <TouchableOpacity
+              key={g.id}
+              style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipActive]}
+              onPress={() => setSelectedGroupId(g.id)}
+            >
+              <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextActive]}>
+                {g.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-            {/* Sélecteur de groupe */}
-            <Text style={styles.fieldLabel}>Groupe</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.groupChipsRow}>
-              <TouchableOpacity
-                style={[styles.groupChip, !selectedGroupId && styles.groupChipActive]}
-                onPress={() => setSelectedGroupId('')}
-              >
-                <Text style={[styles.groupChipText, !selectedGroupId && styles.groupChipTextActive]}>
-                  Aucun
-                </Text>
-              </TouchableOpacity>
-              {groups.map((g) => (
-                <TouchableOpacity
-                  key={g.id}
-                  style={[styles.groupChip, selectedGroupId === g.id && styles.groupChipActive]}
-                  onPress={() => setSelectedGroupId(g.id)}
-                >
-                  <Text style={[styles.groupChipText, selectedGroupId === g.id && styles.groupChipTextActive]}>
-                    {g.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+        <Text style={styles.fieldLabel}>Nom *</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Nom de l'article"
+          value={itemName}
+          onChangeText={setItemName}
+          autoFocus={itemModalMode === 'add'}
+        />
 
-            <Text style={styles.fieldLabel}>Nom *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Nom de l'article"
-              value={itemName}
-              onChangeText={setItemName}
-              autoFocus={itemModalMode === 'add'}
-            />
+        <Text style={styles.fieldLabel}>Unité</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="kg, L, pièces…"
+          value={unit}
+          onChangeText={setUnit}
+        />
 
-            <Text style={styles.fieldLabel}>Unité</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="kg, L, pièces…"
-              value={unit}
-              onChangeText={setUnit}
-            />
+        <Text style={styles.fieldLabel}>Stock & seuil</Text>
+        <View style={styles.row}>
+          <TextInput
+            style={[styles.input, { flex: 1, marginRight: SPACING.sm }]}
+            placeholder="Stock actuel"
+            value={stock}
+            onChangeText={setStock}
+            keyboardType="number-pad"
+          />
+          <TextInput
+            style={[styles.input, { flex: 1 }]}
+            placeholder="Seuil alerte"
+            value={threshold}
+            onChangeText={setThreshold}
+            keyboardType="number-pad"
+          />
+        </View>
+        <Text style={styles.hint}>
+          Ex : stock = 4, seuil = 2 → bascule dans "À acheter" quand il en reste 2
+        </Text>
 
-            <Text style={styles.fieldLabel}>Stock & seuil</Text>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: SPACING.sm }]}
-                placeholder="Stock actuel"
-                value={stock}
-                onChangeText={setStock}
-                keyboardType="number-pad"
-              />
-              <TextInput
-                style={[styles.input, { flex: 1 }]}
-                placeholder="Seuil alerte"
-                value={threshold}
-                onChangeText={setThreshold}
-                keyboardType="number-pad"
-              />
-            </View>
-            <Text style={styles.hint}>
-              Ex : stock = 4, seuil = 2 → bascule dans "À acheter" quand il en reste 2
+        <View style={styles.row}>
+          <TouchableOpacity
+            style={[styles.button, styles.cancelButton]}
+            onPress={() => setItemModalVisible(false)}
+          >
+            <Text style={styles.cancelButtonText}>Annuler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleSaveItem}>
+            <Text style={styles.addButtonText}>
+              {itemModalMode === 'edit' ? 'Enregistrer' : 'Ajouter'}
             </Text>
-
-            <View style={styles.row}>
-              <TouchableOpacity
-                style={[styles.button, styles.cancelButton]}
-                onPress={() => setItemModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.button, styles.addButton]} onPress={handleSaveItem}>
-                <Text style={styles.addButtonText}>
-                  {itemModalMode === 'edit' ? 'Enregistrer' : 'Ajouter'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
+  listToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 34,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.sm + 2,
+  },
+  toolbarText: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
   section: {
     marginHorizontal: SPACING.lg - 4,
     marginBottom: SPACING.md - 2,
@@ -434,13 +432,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
   },
   fabText: { color: '#fff', fontSize: moderateScale(28), fontWeight: '300', lineHeight: moderateScale(32) },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modal: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: BORDER_RADIUS.lg,
-    borderTopRightRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xl,
-  },
   modalTitle: { fontSize: FONT_SIZE.xl, fontWeight: '700', color: COLORS.text, marginBottom: SPACING.md },
   fieldLabel: { fontSize: FONT_SIZE.sm, fontWeight: '600', color: COLORS.textSecondary, marginBottom: SPACING.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
   groupChipsRow: { marginBottom: SPACING.md },

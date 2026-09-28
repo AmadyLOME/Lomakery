@@ -3,6 +3,8 @@ import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-nat
 import { Ionicons } from '@expo/vector-icons';
 import { Text, TextInput } from './Text';
 import Segmented from './Segmented';
+import CollapseAllButton from './CollapseAllButton';
+import { useCollapsedGroups } from '../hooks/useCollapsedGroups';
 import { ShoppingItem, ShoppingGroup } from '../types';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { scale, moderateScale } from '../utils/responsive';
@@ -21,7 +23,7 @@ type ActiveView = 'acheter' | 'dispo';
 export default function FamilyShoppingView({ items, groups, onToggle, onCheckWithStock, onDecrement, onIncrement }: Props) {
   const [activeView, setActiveView] = useState<ActiveView>('acheter');
   const [search, setSearch] = useState('');
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const { collapsed: collapsedGroups, toggle: toggleGroup, toggleAll, allCollapsed } = useCollapsedGroups('collapse:courses');
 
   const aAcheter = items.filter((i) => !i.checked);
   const disponible = items.filter((i) => i.checked);
@@ -40,13 +42,8 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
     (i) => !i.groupId || !groups.find((g) => g.id === i.groupId)
   );
 
-  function toggleGroup(id: string) {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
+  const groupIds = [...grouped.map((g) => g.group.id), ...(ungrouped.length > 0 ? ['__ungrouped'] : [])];
+  const searching = search.trim().length > 0;
 
   function handleCheckboxPress(item: ShoppingItem) {
     const hasThreshold = item.threshold !== undefined;
@@ -123,7 +120,8 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
   }
 
   function renderGroup(groupId: string, label: string, groupItems: ShoppingItem[]) {
-    const isCollapsed = collapsedGroups.has(groupId);
+    // Pendant une recherche, tous les rayons sont ouverts pour ne cacher aucun résultat
+    const isCollapsed = !searching && collapsedGroups.has(groupId);
     return (
       <View key={groupId} style={styles.card}>
         <TouchableOpacity
@@ -187,6 +185,14 @@ export default function FamilyShoppingView({ items, groups, onToggle, onCheckWit
           </View>
         ) : (
           <>
+            <View style={styles.listToolbar}>
+              <Text style={styles.toolbarText}>
+                {filtered.length} article{filtered.length > 1 ? 's' : ''} · {groupIds.length} rayon{groupIds.length > 1 ? 's' : ''}
+              </Text>
+              {!searching && groupIds.length > 1 && (
+                <CollapseAllButton allCollapsed={allCollapsed(groupIds)} onPress={() => toggleAll(groupIds)} />
+              )}
+            </View>
             {grouped.map(({ group, groupItems }) =>
               renderGroup(group.id, group.name, groupItems)
             )}
@@ -217,6 +223,15 @@ const styles = StyleSheet.create({
   },
   searchInput: { flex: 1, fontSize: 15, color: COLORS.text, paddingVertical: SPACING.sm + 2 },
 
+  listToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 34,
+    marginHorizontal: SPACING.lg - 4,
+    marginBottom: SPACING.sm + 2,
+  },
+  toolbarText: { fontSize: 13, fontWeight: '700', color: COLORS.textMuted },
   card: {
     marginHorizontal: SPACING.lg - 4,
     marginBottom: SPACING.md - 2,

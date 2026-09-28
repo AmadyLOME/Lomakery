@@ -3,6 +3,7 @@ import { View, Image, FlatList, TouchableOpacity, StyleSheet, useWindowDimension
 import { Text } from './Text';
 import { Recipe } from '../types';
 import { useRecipePhoto } from '../hooks/useRecipePhoto';
+import { AvailabilityBadge } from './Availability';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS, SHADOWS, TAB_BAR_SPACE } from '../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { moderateScale } from '../utils/responsive';
@@ -10,6 +11,7 @@ import { moderateScale } from '../utils/responsive';
 interface RecipeStats {
   total: number;
   available: number;
+  toBuy: number;
   missing: number;
 }
 
@@ -116,11 +118,12 @@ function RecipeCard({ recipe, householdId, stats, onOpen, onDelete }: RecipeCard
           {stats.total === 0 ? (
             <Text style={[styles.badge, styles.badgeNeutral]}>Aucun ingrédient</Text>
           ) : allReady ? (
-            <Text style={[styles.badge, styles.badgeGreen]}>🟢 Tout est à la casa</Text>
+            <AvailabilityBadge status="available" label="Tout est à la casa" />
           ) : (
             <>
-              <Text style={[styles.badge, styles.badgeGreen]}>🟢 {stats.available}</Text>
-              {stats.missing > 0 && <Text style={[styles.badge, styles.badgeRed]}>🔴 {stats.missing}</Text>}
+              {stats.available > 0 && <AvailabilityBadge status="available" count={stats.available} />}
+              {stats.toBuy > 0 && <AvailabilityBadge status="toBuy" count={stats.toBuy} />}
+              {stats.missing > 0 && <AvailabilityBadge status="missing" count={stats.missing} />}
             </>
           )}
           {stats.total > 0 && <Text style={[styles.badge, styles.badgeNeutral]}>{stats.total} ing.</Text>}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert, Image, ScrollView } from 'react-native';
 import { Text, TextInput } from '../components/Text';
 import { login } from '../services/auth';
 import { COLORS, SPACING, FONT_SIZE, BORDER_RADIUS } from '../constants/theme';
@@ -30,7 +30,7 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.inner}>
+      <ScrollView contentContainerStyle={styles.inner} keyboardShouldPersistTaps="handled" bounces={false}>
         <View style={styles.logoContainer}>
           <Image source={require('../../assets/logo.png')} style={styles.logoImage} />
           <Text style={styles.tagline}>FAMILY · LISTS · TOGETHER</Text>
@@ -67,7 +67,7 @@ export default function LoginScreen() {
             }
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -75,9 +75,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   inner: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
   },
   logoContainer: {
     alignItems: 'center',

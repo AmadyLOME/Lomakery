@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Alert, ActivityIndicator, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Text, TextInput } from '../components/Text';
 import { useAuth } from '../hooks/useAuth';
 import { createHousehold, joinHousehold } from '../services/household';
@@ -38,7 +38,8 @@ export default function HouseholdSetupScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled" bounces={false}>
       <Text style={styles.title}>Configurez votre foyer</Text>
       <Text style={styles.subtitle}>
         Créez un foyer ou rejoignez celui de votre partenaire.
@@ -95,13 +96,15 @@ export default function HouseholdSetupScreen() {
           </TouchableOpacity>
         </>
       )}
-    </View>
+    </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1, backgroundColor: COLORS.background },
   container: {
-    flex: 1,
+    flexGrow: 1,
     backgroundColor: COLORS.background,
     padding: SPACING.xl,
     justifyContent: 'center',

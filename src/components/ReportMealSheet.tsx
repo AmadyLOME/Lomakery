@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Modal, TouchableOpacity, StyleSheet, Pressable } from 'react-native';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import BottomSheet from './BottomSheet';
 import { Text } from './Text';
 import SlotGrid from './SlotGrid';
 import { SlotKey } from '../types';
@@ -31,10 +32,8 @@ export default function ReportMealSheet({ visible, weekId, dishName, slot, ownSl
   }, [visible]);
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Fermer" />
-      <View style={styles.sheet}>
-        <View style={styles.grabber} />
+    <BottomSheet visible={visible} onClose={onClose}>
+      <View style={styles.body}>
         <Text style={styles.title}>Reporter ce repas ?</Text>
         <Text style={styles.subtitle}>
           {dishName}{slot ? ` · ${slotLabel(slot)} sauté` : ''}
@@ -61,22 +60,12 @@ export default function ReportMealSheet({ visible, weekId, dishName, slot, ownSl
           <Text style={styles.secondaryText}>Sauter sans reporter</Text>
         </TouchableOpacity>
       </View>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(31,46,31,0.45)' },
-  sheet: {
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    paddingHorizontal: SPACING.lg - 4,
-    paddingTop: SPACING.sm + 2,
-    paddingBottom: SPACING.xl + 4,
-    gap: SPACING.md - 4,
-  },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.sandDark },
+  body: { gap: SPACING.md - 4 },
   title: { fontSize: 22, fontWeight: '800', color: COLORS.text },
   subtitle: { fontSize: 14, fontWeight: '700', color: COLORS.textMuted, marginTop: -6 },
   hint: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary },

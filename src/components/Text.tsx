@@ -18,10 +18,13 @@ function withFont(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
   return [style, { fontFamily: fontForWeight(flat.fontWeight), fontWeight: 'normal' }];
 }
 
-export function Text({ style, ...props }: TextProps) {
-  return <RNText {...props} style={withFont(style)} />;
+// Le texte suit la taille choisie dans iOS (Réglages › Affichage), plafonnée pour ne pas casser la mise en page
+const MAX_FONT_SCALE = 1.3;
+
+export function Text({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...props }: TextProps) {
+  return <RNText {...props} maxFontSizeMultiplier={maxFontSizeMultiplier} style={withFont(style)} />;
 }
 
-export function TextInput({ style, ...props }: TextInputProps) {
-  return <RNTextInput {...props} style={withFont(style)} />;
+export function TextInput({ style, maxFontSizeMultiplier = MAX_FONT_SCALE, ...props }: TextInputProps) {
+  return <RNTextInput {...props} maxFontSizeMultiplier={maxFontSizeMultiplier} style={withFont(style)} />;
 }
