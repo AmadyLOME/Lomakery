@@ -92,7 +92,8 @@ l'ouverture du Menu.
 ## Feuille de route
 
 Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
-malignes » et « mode magasin et mode sombre ». Statut : **maquettes proposées, en attente de validation**.
+malignes » et « mode magasin et mode sombre ». Statut : **validées** ; développement en cours (sauf le mode sombre,
+reporté).
 
 1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
    pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
@@ -107,7 +108,7 @@ malignes » et « mode magasin et mode sombre ». Statut : **maquettes proposée
    les quantités numériques sont recalculées (« 1 kg » → « 1,5 kg »), le texte libre est affiché tel quel.
 5. **Étiquettes de recettes** — étiquettes libres par recette (`tags: string[]`) avec couleurs, filtre en pastilles
    dans l'onglet Recettes, gestion des étiquettes depuis le Profil.
-6. **Mode sombre** — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
+6. **Mode sombre** *(reporté — à faire plus tard, spécifications conservées)* — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
    AsyncStorage) ; palette sombre dédiée dans `theme.ts` (fond #141A14, surfaces #1F2A20, orange éclairci pour le
    contraste), les couleurs ne sont plus lues en dur mais via un contexte de thème.
 
