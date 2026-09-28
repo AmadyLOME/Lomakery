@@ -14,6 +14,12 @@ import {
 import { db } from './firebase';
 import { ShoppingItem, ShoppingGroup, Category } from '../types';
 
+// Ordre alphabétique français, sans tenir compte des majuscules ni des accents (« Œufs » avec les O)
+const collator = new Intl.Collator('fr', { sensitivity: 'base', numeric: true });
+function byName<T extends { name: string }>(a: T, b: T) {
+  return collator.compare(a.name.trim(), b.name.trim());
+}
+
 // Écoute en temps réel les groupes de la liste famille
 export function subscribeToFamilyGroups(
   householdId: string,
@@ -23,7 +29,7 @@ export function subscribeToFamilyGroups(
     collection(db, 'households', householdId, 'familyGroups'),
     (snap) => {
       const groups = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingGroup));
-      onChange(groups);
+      onChange(groups.sort(byName));
     },
     (error) => console.error('[familyGroups] onSnapshot error:', error.code)
   );
@@ -54,7 +60,7 @@ export function subscribeToFamilyList(
     collection(db, 'households', householdId, 'familyList'),
     (snap) => {
       const items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as ShoppingItem));
-      onChange(items);
+      onChange(items.sort(byName));
     },
     (error) => console.error('[familyList] onSnapshot error:', error.code)
   );
