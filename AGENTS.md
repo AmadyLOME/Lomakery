@@ -89,6 +89,32 @@ l'ouverture du Menu.
 7. Sur les iPhones : Expo Go → Projects → Lomakery → production → ouvrir l'update la plus récente (les autres
    membres : QR code « Preview » du tableau de bord Expo).
 
+## Feuille de route
+
+Maquettes : canvas « TeninGrocery — Maquette UI arrondie » (Artifact claude.ai), rangées « courses et recettes plus
+malignes » et « mode magasin et mode sombre ». Statut : **maquettes proposées, en attente de validation**.
+
+1. **Du menu aux courses en un geste** — bouton « Ajouter les N manquants aux courses » sur la fiche recette et
+   pour la semaine du menu. Les articles connus passent « À acheter » ; les absents sont créés dans un rayon choisi
+   (proposé d'après les autres recettes, sinon à choisir). Une feuille de confirmation liste ce qui va être fait.
+2. **Mode « En magasin »** — vue plein écran des seuls articles « À acheter », gros ronds à cocher, barre de
+   progression (8 / 15), écran maintenu allumé (`expo-keep-awake`), rayons dans l'**ordre du parcours magasin**
+   (nouveau champ `order` sur `familyGroups`, réglé par glisser-déposer, commun au foyer).
+3. **Ajout rapide dans Courses** — champ « + Ajouter » avec suggestions tirées des articles connus (passer « À
+   acheter », ou créer un nouvel article), et bandeau **« Annuler »** de quelques secondes après un cochage ou une
+   suppression.
+4. **Portions** — nombre de personnes de référence par recette (`servings`) et sélecteur « Pour N personnes » ;
+   les quantités numériques sont recalculées (« 1 kg » → « 1,5 kg »), le texte libre est affiché tel quel.
+5. **Étiquettes de recettes** — étiquettes libres par recette (`tags: string[]`) avec couleurs, filtre en pastilles
+   dans l'onglet Recettes, gestion des étiquettes depuis le Profil.
+6. **Mode sombre** — réglage « Apparence : Auto / Clair / Sombre » dans le Profil (propre au téléphone,
+   AsyncStorage) ; palette sombre dédiée dans `theme.ts` (fond #141A14, surfaces #1F2A20, orange éclairci pour le
+   contraste), les couleurs ne sont plus lues en dur mais via un contexte de thème.
+
+Plus tard : rappels de cuisson (notifications locales), vraie app (build EAS + TestFlight) avec hors-ligne complet,
+base Firebase de test, règles déployées par la Firebase CLI et vérifications automatiques, partage de la liste en
+texte, suggestions à partir de l'historique, Siri / widget iOS.
+
 ## Limites connues
 
 - Expo Go impose sa version du SDK : il faut migrer quand il se met à jour.
